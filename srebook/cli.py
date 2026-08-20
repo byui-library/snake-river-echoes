@@ -31,7 +31,7 @@ def _describe_draft(issue: Issue, folder: Path) -> None:
     for b in issue.bookmarks:
         print(f"      sheet {b.sheet:>3}  {b.title}")
 
-    unplaced = [b.title for b in issue.bookmarks if b.sheet == 1]
+    unplaced = [b.title for b in issue.bookmarks if b.needs_review]
     if unplaced:
         print("\n  These could not be located in the body and are parked on sheet 1.")
         print("  Set their sheet numbers before building:")

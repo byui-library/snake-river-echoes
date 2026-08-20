@@ -10,8 +10,8 @@ scans into a single searchable, bookmarked, page-labeled PDF.
 Built for digitizing *Snake River Echoes*, the journal of the Upper Snake River Valley
 Historical Society, but intended to be handed to other archives as an installer.
 
-**Current state: core pipeline and CLI work.** `srebook draft` then `srebook build`
-produces a finished, searchable, bookmarked PDF. The GUI is not written yet.
+**Current state: pipeline, CLI and GUI work.** What remains is packaging: bundling
+Tesseract and building the installer.
 
 The authoritative design is
 [docs/superpowers/specs/2026-08-20-sre-book-builder-design.md](docs/superpowers/specs/2026-08-20-sre-book-builder-design.md).
@@ -73,7 +73,9 @@ srebook/
     ocr.py       300 DPI image -> hOCR, cached per sheet
     outline.py   OCR text -> [(title, sheet)] guesses
     assemble.py  JPEGs + text layer + outline + labels + metadata -> PDF
-  gui/      Tkinter/ttk
+  gui/
+    grid.py      outline rules; imports no tkinter, so it is tested headless
+    app.py       widgets, threading, layout only
   cli.py    thin wrapper over core; also the manual test harness
 ```
 
@@ -94,7 +96,8 @@ editing a bookmark and rebuilding must never re-OCR.
 ```
 py -m srebook.cli draft "Image Files/SRE Vol 1 Number 1"    # OCR + propose outline
 py -m srebook.cli build "Image Files/SRE Vol 1 Number 1"    # after reviewing the sidecar
-py -m pytest                                                 # 128 tests, ~23s
+py -m srebook.gui                                            # the window
+py -m pytest                                                 # 165 tests, ~22s
 ```
 
 Drafting an issue takes about 80 seconds; building from cached OCR is near-instant.
@@ -115,7 +118,7 @@ Drafting an issue takes about 80 seconds; building from cached OCR is near-insta
 |---|---|---|
 | 0 | hOCR-to-PDF spike proven on the real 22 pages | **done** — [findings](docs/superpowers/specs/2026-08-20-phase0-findings.md) |
 | 1 | Core + CLI; a finished Vol 1 No 1 PDF | **done** — 128 tests, real PDF built |
-| 2 | Tkinter GUI | not started |
+| 2 | Tkinter GUI | **done** — 165 tests |
 | 3 | Inno Setup installer | not started |
 
 Keep this table current.
@@ -140,3 +143,15 @@ Non-obvious things the spike established — read the findings doc before writin
 - **The TOC leader-dot heuristic in the original spec does not work** and has been replaced
   by title-location. Tesseract reads dot leaders as random letters and swallows the page
   number with them.
+
+## Phase 1-2 lessons
+
+- **`Bookmark.needs_review` is recorded, never inferred.** An early version decided "the
+  drafter could not place this" from `sheet == 1`, which flags a legitimate Front Cover
+  bookmark as unreviewed. The drafter knows; it writes the flag down.
+- **`detect_body_start` extrapolates back to printed page 1** rather than reporting the
+  first sheet that prints a folio. Not every body page prints its number, and reporting
+  the first numbered one labels real printed pages as roman front matter.
+- **Candidate titles stop at the contents sheet.** Reading further picks up article
+  headings, so an article whose heading is punctuated differently from its contents entry
+  earns a second, duplicate bookmark.

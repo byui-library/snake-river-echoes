@@ -150,8 +150,10 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
     titles = outline.candidate_titles(front_matter)
     for title, sheet in outline.locate_titles(titles, body):
         # An unlocated title is parked on sheet 1 rather than dropped -- the
-        # operator needs to see it in the grid to place it.
-        issue.bookmarks.append(Bookmark(title, sheet if sheet else 1))
+        # operator needs to see it in the grid to place it -- and flagged, so
+        # nothing downstream has to guess which sheet-1 entries are unplaced.
+        issue.bookmarks.append(
+            Bookmark(title, sheet if sheet else 1, needs_review=sheet is None))
 
     output_dir(folder).mkdir(parents=True, exist_ok=True)
     save_sidecar(issue, existing)

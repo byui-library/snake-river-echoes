@@ -17,9 +17,15 @@ class Bookmark:
     title: str
     sheet: int
     children: list["Bookmark"] = field(default_factory=list)
+    # Set by the drafter when it could not locate this title in the body. The
+    # sheet is a guess, and a person must confirm it. Recorded rather than
+    # inferred from "sheet == 1", which mislabels a real Front Cover bookmark.
+    needs_review: bool = False
 
     def to_dict(self) -> dict:
         d: dict = {"title": self.title, "sheet": self.sheet}
+        if self.needs_review:
+            d["needs_review"] = True
         if self.children:
             d["children"] = [c.to_dict() for c in self.children]
         return d
@@ -30,6 +36,7 @@ class Bookmark:
             title=d["title"],
             sheet=d["sheet"],
             children=[cls.from_dict(c) for c in d.get("children", [])],
+            needs_review=d.get("needs_review", False),
         )
 
 

@@ -16,6 +16,11 @@ dev = ["pytest>=8", "pypdfium2>=4"]
 [project.scripts]
 srebook = "srebook.cli:main"
 
+# gui-scripts, not scripts: on Windows this launches without a console window
+# behind it, which is what archive staff should see.
+[project.gui-scripts]
+srebook-gui = "srebook.gui.app:main"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

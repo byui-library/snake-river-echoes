@@ -230,3 +230,27 @@ def test_a_body_heading_does_not_become_a_second_bookmark(tmp_path, make_sheet):
 
     assert [b.title for b in issue.bookmarks] == ["A GOAL IS ACHIEVED"]
     assert issue.bookmarks[0].sheet == 3
+
+
+def test_draft_marks_only_the_titles_it_could_not_locate(tmp_path, make_sheet):
+    """A located title is settled; an unlocated one is parked AND flagged, so a
+    bookmark legitimately on sheet 1 is not mistaken for an unplaced one."""
+    folder = tmp_path / "issue"
+    folder.mkdir()
+    for n in (1, 2, 3):
+        src = make_sheet(name=f"Z_{n:02d}.tif")
+        src.replace(folder / src.name)
+    cache = pipeline.cache_dir(folder)
+    cache.mkdir(parents=True)
+    (cache / "Z_01.hocr").write_bytes(hocr_page([("COVER PAGE", (200, 300, 900, 360))]))
+    (cache / "Z_02.hocr").write_bytes(hocr_page(
+        [("CONTENTS", (200, 300, 900, 360)),
+         ("ORAL HISTORY", (200, 400, 1400, 460)),
+         ("IDAHO POETRY", (200, 500, 1400, 560))]))
+    (cache / "Z_03.hocr").write_bytes(hocr_page([("ORAL HISTORY", (200, 300, 1400, 360))]))
+
+    issue = pipeline.draft(folder)
+
+    flags = {b.title: b.needs_review for b in issue.bookmarks}
+    assert flags["ORAL HISTORY"] is False
+    assert flags["IDAHO POETRY"] is True

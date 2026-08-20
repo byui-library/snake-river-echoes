@@ -130,3 +130,26 @@ def test_nesting_deeper_than_two_levels_is_rejected():
     deep = Bookmark("A", 1, children=[Bookmark("B", 2, children=[Bookmark("C", 3)])])
 
     assert any("two levels" in p.lower() for p in validate(an_issue(bookmarks=[deep]), 22))
+
+
+# ------------------------------------------------------- needs review ----
+
+def test_a_bookmark_can_be_marked_as_needing_review(tmp_path):
+    """The drafter records which titles it could not place, rather than the GUI
+    guessing from 'sheet == 1' -- which mislabels a real Front Cover bookmark."""
+    issue = an_issue(bookmarks=[Bookmark("Idaho Poetry", 1, needs_review=True),
+                                Bookmark("Front Cover", 1)])
+    path = tmp_path / "x.srebook.json"
+
+    save_sidecar(issue, path)
+    loaded = load_sidecar(path)
+
+    assert loaded.bookmarks[0].needs_review is True
+    assert loaded.bookmarks[1].needs_review is False
+
+
+def test_reviewed_bookmarks_omit_the_flag(tmp_path):
+    path = tmp_path / "x.srebook.json"
+    save_sidecar(an_issue(bookmarks=[Bookmark("Cover", 1)]), path)
+
+    assert "needs_review" not in json.loads(path.read_text(encoding="utf-8"))["bookmarks"][0]
