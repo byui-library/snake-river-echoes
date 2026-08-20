@@ -7,8 +7,25 @@ Built to digitize *Snake River Echoes*, the journal of the Upper Snake River Val
 Historical Society, and intended to be installed on archive workstations by staff who
 should not have to think about OCR.
 
-> **Status: design complete, implementation not started.** See
+> **Status: the pipeline works.** `draft` then `build` produces a finished PDF.
+> The GUI and installer are not written yet. See
 > [the design spec](docs/superpowers/specs/2026-08-20-sre-book-builder-design.md).
+
+## Using it
+
+```
+py -m srebook.cli draft "Image Files/SRE Vol 1 Number 1"
+```
+
+OCRs the issue, works out where the body starts, and proposes an outline by locating
+each contents-page title in the body. Titles it cannot place are parked and reported.
+Review the sidecar it writes, then:
+
+```
+py -m srebook.cli build "Image Files/SRE Vol 1 Number 1"
+```
+
+Vol 1 No 1: 22 sheets, 107 MB of TIFFs in, 9.97 MB PDF out, ~80 seconds.
 
 ## What you get per issue
 
@@ -59,8 +76,10 @@ archival storage; a clone will not have them. Sample material used during develo
 ## Repository layout
 
 ```
-srebook/          application (core pipeline + GUI)     [not yet written]
-tests/            test suite and small fixtures         [not yet written]
+srebook/core/     the pipeline: ingest, prepare, ocr, outline, assemble
+srebook/cli.py    command line front end
+srebook/gui/      Tkinter interface                     [not yet written]
+tests/            128 tests, no image fixtures required
 packaging/        PyInstaller spec, Inno Setup script   [not yet written]
 docs/
   superpowers/specs/    design documents

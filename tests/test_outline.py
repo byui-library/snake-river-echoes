@@ -1,0 +1,228 @@
+"""The outline parser, tested against what Tesseract really produced for
+Vol 1 No 1 -- dot leaders read as noise and all.
+"""
+from srebook.core import outline
+
+# Verbatim OCR of the contents page (sheet 2), from the Phase 0 spike.
+REAL_TOC = [
+    "THE UPPER SNAKE RIVER VALLEY HISTORICAL SOCIETY QUARTERLY",
+    "Summer Issue, 1971 Volume 1, Number 1",
+    "CONTENTS",
+    "A GOAL IS ACHIEVED ne",
+    "The editors comment about the Historical Society and its",
+    "contributions to the furtherment. of the heritage of",
+    "Eastern [dahiog 666037. FO ek ee ee ee mS",
+    "ORAL HISTORY",
+    "by Harold S. Forbush A program of recorded history of",
+    "men and women who helped to make the events. ........ .'4",
+    "EASTERN IDAHO HISTORY FAIR - 1971",
+    "An experiment in the display of artifacts and heritage",
+    "which drew interesite from ale over the states. 276. ee 7",
+    "A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY",
+    "by J. Edgar Birch. A unique and interesting history of",
+    "ANDREW HENRY",
+    "by Louis J. Clements. A biography of the mountain man",
+    "IDAHO POETRY",
+    "by J. Bdgan Biren ee cs ie eae ee hse oO",
+]
+
+REAL_BODY = {
+    3: ["A GOAL IS ACHIEVED!", "The Upper Snake River Valley"],
+    4: ["4", "of the Historical Society,", "ORAL HISTORY"],
+    5: ["The introduction of the magnetic"],
+    6: ["6", "and a copy made of the original, so"],
+    7: ["EASTERN IDAHO HISTORY FAIR - 1971", "An experiment"],
+    8: ["8", "A BRIEF AUTOBIOGRAPHY", "There were several rifles"],
+    9: ["dug into the bank of a native slough"],
+    10: ["10", "know that the society will both"],
+    11: ["ANDREW HENRY - FUR TRAPPER", "Andrew Henry was born in Fayette"],
+    12: ["12", "commented about, He was tall and"],
+}
+
+
+# ------------------------------------------------------- candidate titles ----
+
+def test_titles_survive_the_dot_leaders():
+    """Tesseract reads rows of periods as random letters and swallows the page
+    number with them. The title in front of the leader is still clean."""
+    titles = outline.candidate_titles(REAL_TOC)
+
+    assert "A GOAL IS ACHIEVED" in titles
+    assert "ORAL HISTORY" in titles
+    assert "EASTERN IDAHO HISTORY FAIR - 1971" in titles
+
+
+def test_author_credits_are_not_mistaken_for_titles():
+    """Capitalisation must be tested on the RAW line. Stripping lowercase first
+    turns 'by Harold S. Forbush' into the plausible-looking title 'H S F'."""
+    titles = outline.candidate_titles(REAL_TOC)
+
+    assert not any("FORBUSH" in t.upper() for t in titles)
+    assert not any(t.replace(" ", "") in ("HSF", "HSFA", "JEB") for t in titles)
+
+
+def test_masthead_above_the_contents_heading_is_skipped():
+    titles = outline.candidate_titles(REAL_TOC)
+
+    assert not any("QUARTERLY" in t for t in titles)
+    assert "CONTENTS" not in titles
+
+
+def test_description_lines_are_not_titles():
+    titles = outline.candidate_titles(REAL_TOC)
+
+    assert not any(t.startswith("The editors comment") for t in titles)
+
+
+def test_the_real_contents_page_yields_exactly_the_articles():
+    assert outline.candidate_titles(REAL_TOC) == [
+        "A GOAL IS ACHIEVED",
+        "ORAL HISTORY",
+        "EASTERN IDAHO HISTORY FAIR - 1971",
+        "A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY",
+        "ANDREW HENRY",
+        "IDAHO POETRY",
+    ]
+
+
+def test_titles_are_not_repeated():
+    assert outline.candidate_titles(["CONTENTS", "ORAL HISTORY", "ORAL HISTORY"]) == [
+        "ORAL HISTORY"]
+
+
+def test_a_page_with_no_contents_heading_still_yields_titles():
+    """Not every issue prints the word CONTENTS."""
+    assert outline.candidate_titles(["ORAL HISTORY", "by someone"]) == ["ORAL HISTORY"]
+
+
+def test_very_short_all_caps_fragments_are_ignored():
+    assert outline.candidate_titles(["CONTENTS", "A B", "OK", "ORAL HISTORY"]) == [
+        "ORAL HISTORY"]
+
+
+# ---------------------------------------------------------- locating them ----
+
+def test_a_title_is_located_where_its_article_begins():
+    located = outline.locate_titles(["ORAL HISTORY"], REAL_BODY)
+
+    assert located == [("ORAL HISTORY", 4)]
+
+
+def test_a_body_heading_may_carry_extra_words():
+    """The contents says 'ANDREW HENRY'; the article says
+    'ANDREW HENRY - FUR TRAPPER'."""
+    assert outline.locate_titles(["ANDREW HENRY"], REAL_BODY) == [("ANDREW HENRY", 11)]
+
+
+def test_a_body_heading_may_be_shorter_than_the_contents_entry():
+    located = outline.locate_titles(["A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY"],
+                                    REAL_BODY)
+
+    assert located == [("A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY", 8)]
+
+
+def test_punctuation_differences_do_not_prevent_a_match():
+    """Contents: 'A GOAL IS ACHIEVED'. Body: 'A GOAL IS ACHIEVED!'."""
+    assert outline.locate_titles(["A GOAL IS ACHIEVED"], REAL_BODY) == [
+        ("A GOAL IS ACHIEVED", 3)]
+
+
+def test_a_title_never_printed_in_the_body_is_reported_unlocated():
+    """'IDAHO POETRY' is a section label. The operator supplies its sheet."""
+    assert outline.locate_titles(["IDAHO POETRY"], REAL_BODY) == [("IDAHO POETRY", None)]
+
+
+def test_the_earliest_occurrence_wins():
+    body = {3: ["ORAL HISTORY"], 9: ["ORAL HISTORY"]}
+
+    assert outline.locate_titles(["ORAL HISTORY"], body) == [("ORAL HISTORY", 3)]
+
+
+def test_a_short_title_does_not_match_a_passing_mention():
+    """'ANDREW HENRY' as running prose must not outrank the real heading."""
+    body = {3: ["Andrew Henry was born in Fayette County"], 11: ["ANDREW HENRY"]}
+
+    assert outline.locate_titles(["ANDREW HENRY"], body) == [("ANDREW HENRY", 11)]
+
+
+def test_the_whole_real_contents_page_resolves():
+    titles = outline.candidate_titles(REAL_TOC)
+    located = dict(outline.locate_titles(titles, REAL_BODY))
+
+    assert located["A GOAL IS ACHIEVED"] == 3
+    assert located["ORAL HISTORY"] == 4
+    assert located["EASTERN IDAHO HISTORY FAIR - 1971"] == 7
+    assert located["A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY"] == 8
+    assert located["ANDREW HENRY"] == 11
+    assert located["IDAHO POETRY"] is None
+
+
+# ------------------------------------------------- detecting page numbers ----
+
+def test_body_start_is_extrapolated_back_to_printed_page_one():
+    """Sheet 4 prints '4' and sheet 6 prints '6', so sheet number equals printed
+    page number -- which means printed page 1 is sheet 1, not sheet 4. Returning
+    the first *numbered* sheet would label sheets 1-3 as roman i, ii, iii."""
+    assert outline.detect_body_start(REAL_BODY) == (1, 1)
+
+
+def test_body_start_extrapolates_across_an_offset():
+    """Sheet 4 prints '2', so the offset is 2 and printed page 1 is sheet 3 --
+    even though sheet 3 prints no number of its own."""
+    body = {3: ["text"], 4: ["2", "text"], 6: ["4", "text"], 8: ["6", "text"]}
+
+    assert outline.detect_body_start(body) == (3, 1)
+
+
+def test_extrapolation_never_runs_off_the_front_of_the_issue():
+    """If the body's first printed number is high, printed page 1 would land
+    before sheet 1. Clamp instead."""
+    body = {1: ["9", "text"], 2: ["10", "text"]}
+
+    assert outline.detect_body_start(body) == (1, 9)
+
+
+def test_body_start_returns_none_when_no_numbers_are_printed():
+    assert outline.detect_body_start({3: ["text"], 4: ["more text"]}) is None
+
+
+def test_a_single_stray_number_is_not_enough_to_conclude():
+    """One match is coincidence. The offset has to repeat."""
+    assert outline.detect_body_start({3: ["text"], 7: ["99"], 8: ["text"]}) is None
+
+
+# ------------------------------------------------ where the contents page is ----
+
+def test_the_contents_sheet_is_found_by_its_heading():
+    """Titles must be located in the BODY, not matched against their own entry
+    on the contents page."""
+    sheets = {1: ["THE UPPER SNAKE RIVER VALLEY"], 2: REAL_TOC, 3: ["A GOAL IS ACHIEVED!"]}
+
+    assert outline.find_contents_sheet(sheets) == 2
+
+
+def test_contents_sheet_defaults_to_the_first_sheet_when_unmarked():
+    """Not every issue prints the word CONTENTS."""
+    assert outline.find_contents_sheet({1: ["ORAL HISTORY"], 2: ["prose"]}) == 1
+
+
+def test_contents_heading_is_not_sought_deep_inside_the_issue():
+    """A body page mentioning 'contents' must not be mistaken for the TOC."""
+    sheets = {1: ["COVER"], 2: ["prose"], 9: ["CONTENTS"]}
+
+    assert outline.find_contents_sheet(sheets) == 1
+
+
+def test_trailing_leader_noise_is_stripped_from_titles():
+    """Real OCR: 'WHO AND WHAT IN IDAHO. 99939) 0 2 Ao a'."""
+    titles = outline.candidate_titles(
+        ["CONTENTS", "WHO AND WHAT IN IDAHO. 99939) 0 2 Ao a"])
+
+    assert titles == ["WHO AND WHAT IN IDAHO"]
+
+
+def test_a_year_at_the_end_of_a_title_is_kept():
+    """'EASTERN IDAHO HISTORY FAIR - 1971' ends in a number that belongs."""
+    titles = outline.candidate_titles(["CONTENTS", "EASTERN IDAHO HISTORY FAIR - 1971"])
+
+    assert titles == ["EASTERN IDAHO HISTORY FAIR - 1971"]

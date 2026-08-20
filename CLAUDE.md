@@ -10,7 +10,8 @@ scans into a single searchable, bookmarked, page-labeled PDF.
 Built for digitizing *Snake River Echoes*, the journal of the Upper Snake River Valley
 Historical Society, but intended to be handed to other archives as an installer.
 
-**Current state: design complete, no code yet.** The next step is the Phase 0 spike.
+**Current state: core pipeline and CLI work.** `srebook draft` then `srebook build`
+produces a finished, searchable, bookmarked PDF. The GUI is not written yet.
 
 The authoritative design is
 [docs/superpowers/specs/2026-08-20-sre-book-builder-design.md](docs/superpowers/specs/2026-08-20-sre-book-builder-design.md).
@@ -88,6 +89,16 @@ editing a bookmark and rebuilding must never re-OCR.
 - **The operator is the accuracy backstop.** The TOC parser is a head start, not a source
   of truth. Never build a flow that publishes unreviewed bookmarks.
 
+## Running it
+
+```
+py -m srebook.cli draft "Image Files/SRE Vol 1 Number 1"    # OCR + propose outline
+py -m srebook.cli build "Image Files/SRE Vol 1 Number 1"    # after reviewing the sidecar
+py -m pytest                                                 # 128 tests, ~23s
+```
+
+Drafting an issue takes about 80 seconds; building from cached OCR is near-instant.
+
 ## Environment notes
 
 - Windows. The Bash tool is Git Bash; PowerShell is also available.
@@ -103,7 +114,7 @@ editing a bookmark and rebuilding must never re-OCR.
 | Phase | Deliverable | Status |
 |---|---|---|
 | 0 | hOCR-to-PDF spike proven on the real 22 pages | **done** — [findings](docs/superpowers/specs/2026-08-20-phase0-findings.md) |
-| 1 | Core + CLI; a finished Vol 1 No 1 PDF | not started |
+| 1 | Core + CLI; a finished Vol 1 No 1 PDF | **done** — 128 tests, real PDF built |
 | 2 | Tkinter GUI | not started |
 | 3 | Inno Setup installer | not started |
 
