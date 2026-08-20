@@ -114,12 +114,18 @@ save-file, so a half-reviewed issue survives a crash or a shift change.
   "bookmarks": [
     { "title": "Front Cover", "sheet": 1 },
     { "title": "Table of Contents", "sheet": 2 },
-    { "title": "Fort Hall Reminiscences", "sheet": 9 }
+    { "title": "Andrew Henry", "sheet": 11 },
+    { "title": "Idaho Poetry", "sheet": 19, "children": [
+      { "title": "My Home in Idaho", "sheet": 19 },
+      { "title": "The Grand Old Snake", "sheet": 21 }
+    ]}
   ]
 }
 ```
 
 `sheet` is 1-based and refers to physical scan order, never printed page number.
+
+`children` is optional and nests one level only. A parent always carries its own `sheet`.
 
 ### Page labels
 
@@ -137,6 +143,26 @@ Written to both the PDF Info dictionary and XMP: Title (`Snake River Echoes, Vol
 No. 1 (1971)`), Author (the society), Subject, Keywords, creation date. Volume, issue,
 and year are pre-filled by parsing filenames (`SRE_1971_Vol1_No1_01.tif`), but every
 field stays editable — other archives will not use this naming convention.
+
+### Outline structure
+
+Bookmarks nest at most two levels: article, and optionally the separately-titled pieces
+inside a printed department.
+
+1. **Two levels, never three.**
+2. **Nest only when a printed section holds 2 or more separately-titled pieces.** A
+   one-item section is just an article.
+3. **Ship expanded** (positive `/Count` on the outline node) while the issue's total entry
+   count is under 40; collapse beyond that.
+4. **Every node navigates.** No grouping label that fails to jump anywhere.
+
+Rationale: navigation research favours broad-shallow over narrow-deep, and nesting is only
+safe when the parent label predicts its children. "IDAHO POETRY" does not predict "The
+Grand Old Snake", so that child must be visible on load rather than hidden behind a
+collapsed node — hence rule 3. Rule 4 exists because a dead parent node is the most common
+defect in hand-made PDF outlines.
+
+For Vol 1 No 1 this yields 8 top-level entries, one of which expands to two poems.
 
 ### TOC parser
 
