@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -47,19 +48,93 @@ class Word:
         return max(self.baseline_y - self.y0, 1.0)
 
 
-def find_tesseract() -> str | None:
-    """The Tesseract binary: bundled beside the app, on PATH, or installed."""
-    bundled = Path(__file__).resolve().parent.parent / "vendor" / "tesseract" / "tesseract.exe"
-    if bundled.exists():
-        return str(bundled)
-    if env := os.environ.get("SREBOOK_TESSERACT"):
-        if Path(env).exists():
-            return env
+def bundle_root(bundle: Path | None = None) -> Path:
+    """Where a packaged build keeps the binaries it ships with."""
+    if bundle is not None:
+        return Path(bundle)
+    if getattr(sys, "frozen", False):
+        # PyInstaller unpacks bundled data to _MEIPASS: in a onedir build that
+        # is the _internal folder beside the exe, not the exe's own folder.
+        meipass = getattr(sys, "_MEIPASS", None)
+        return Path(meipass) if meipass else Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
+
+
+def bundle_candidates(bundle: Path | None = None) -> list[Path]:
+    """Where a packaged build might keep the binaries it ships with.
+
+    The installer lays Tesseract beside the exe rather than routing it through
+    PyInstaller, which reclassifies its DLLs as binaries and duplicates 130 MB
+    of them into _internal as well. Both layouts resolve, so the app does not
+    care how it was packaged.
+    """
+    if bundle is not None:
+        return [Path(bundle)]
+    roots: list[Path] = []
+    if getattr(sys, "frozen", False):
+        roots.append(Path(sys.executable).resolve().parent)
+        if meipass := getattr(sys, "_MEIPASS", None):
+            roots.append(Path(meipass))
+    else:
+        roots.append(Path(__file__).resolve().parent.parent)
+    return roots
+
+
+def bundled_tesseract(bundle: Path | None = None) -> Path:
+    """The first candidate that actually holds Tesseract, else the first one, so
+    an error message can name where it looked."""
+    candidates = [root / "vendor" / "tesseract" / "tesseract.exe"
+                  for root in bundle_candidates(bundle)]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+def find_tesseract(frozen: bool | None = None, bundle: Path | None = None) -> str | None:
+    """The Tesseract binary to use.
+
+    A packaged build uses the one it ships with, or one the operator named
+    explicitly, and never PATH. Otherwise a build that bundled no Tesseract at
+    all would work on any machine that happens to have it installed and fail on
+    the first archive workstation.
+    """
+    if frozen is None:
+        frozen = bool(getattr(sys, "frozen", False))
+
+    shipped = bundled_tesseract(bundle)
+    if shipped.exists():
+        return str(shipped)
+
+    # An explicit environment override is deliberate operator action, so it is
+    # honoured even in a packaged build. PATH is not.
+    env = os.environ.get("SREBOOK_TESSERACT")
+    if env and Path(env).exists():
+        return env
+
+    if frozen:
+        return None
+
     if found := shutil.which("tesseract"):
         return found
     if Path(_WINDOWS_TESSERACT).exists():
         return _WINDOWS_TESSERACT
     return None
+
+
+def tesseract_source(frozen: bool | None = None, bundle: Path | None = None) -> str:
+    """Which Tesseract was resolved, so a clean-machine test can assert that the
+    packaged one ran rather than merely that OCR succeeded."""
+    found = find_tesseract(frozen=frozen, bundle=bundle)
+    if found is None:
+        return "not found"
+    if found == str(bundled_tesseract(bundle)):
+        return "bundled"
+    if found == os.environ.get("SREBOOK_TESSERACT"):
+        return "SREBOOK_TESSERACT"
+    if found == _WINDOWS_TESSERACT:
+        return "system installation"
+    return "PATH"
 
 
 def run_tesseract(image: Image.Image, cache_dir: Path, key: str,
@@ -78,9 +153,9 @@ def run_tesseract(image: Image.Image, cache_dir: Path, key: str,
     binary = find_tesseract()
     if binary is None:
         raise OcrError(
-            "Tesseract could not be found. It is normally installed alongside "
-            "this program; set SREBOOK_TESSERACT to its location if it lives "
-            "somewhere else."
+            "Tesseract could not be found. This program normally ships with it "
+            f"at {bundled_tesseract()}. If your copy lives somewhere else, set "
+            "the SREBOOK_TESSERACT environment variable to its full path."
         )
 
     tmp = cache_dir / f"{key}.ocr-input.png"

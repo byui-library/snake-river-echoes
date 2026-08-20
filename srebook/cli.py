@@ -11,7 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from .core import pipeline
+from .core import ocr, pipeline
 from .core.model import Issue, load_sidecar
 
 
@@ -64,6 +64,47 @@ def _cmd_build(args) -> int:
     return 0
 
 
+def _cmd_doctor(_args) -> int:
+    """Report what this copy of the program can actually do.
+
+    Exists so a clean-machine test can assert that the *bundled* Tesseract ran,
+    not merely that OCR succeeded -- on a developer machine those look identical.
+    """
+    import sys
+
+    frozen = bool(getattr(sys, "frozen", False))
+    print("SRE Book Builder")
+    print(f"  running     {'packaged' if frozen else 'from source'}")
+    print(f"  python      {sys.version.split()[0]}")
+
+    for label, module in (("Pillow", "PIL"), ("pikepdf", "pikepdf"), ("lxml", "lxml")):
+        try:
+            mod = __import__(module)
+            version = getattr(mod, "__version__", "present")
+        except ImportError:
+            version = "MISSING"
+        print(f"  {label:<11} {version}")
+
+    binary = ocr.find_tesseract()
+    source = ocr.tesseract_source()
+    print(f"  tesseract   {source}")
+    if binary is None:
+        print(f"              expected at {ocr.bundled_tesseract()}")
+        print("\nTesseract is not available, so this copy cannot read any scans.")
+        return 1
+
+    print(f"              {binary}")
+    tessdata = Path(binary).parent / "tessdata"
+    languages = (sorted(p.stem for p in tessdata.glob("*.traineddata"))
+                 if tessdata.is_dir() else [])
+    print(f"  languages   {', '.join(languages) if languages else 'none found'}")
+
+    if not languages:
+        print("\nNo language data found, so Tesseract cannot read anything.")
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="srebook",
@@ -83,6 +124,10 @@ def main(argv: list[str] | None = None) -> int:
     build = sub.add_parser("build", help="build the PDF from a reviewed draft")
     build.add_argument("folder", help="folder of TIFF page scans")
     build.set_defaults(func=_cmd_build)
+
+    doctor = sub.add_parser(
+        "doctor", help="check this installation can read scans and build PDFs")
+    doctor.set_defaults(func=_cmd_doctor)
 
     args = parser.parse_args(argv)
     try:

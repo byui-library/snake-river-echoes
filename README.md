@@ -7,8 +7,8 @@ Built to digitize *Snake River Echoes*, the journal of the Upper Snake River Val
 Historical Society, and intended to be installed on archive workstations by staff who
 should not have to think about OCR.
 
-> **Status: pipeline, CLI and GUI work.** What remains is packaging — bundling
-> Tesseract and building the installer. See
+> **Status: everything is built, including a 64 MB Windows installer.** What remains
+> is running it on a machine that has never had development tools. See
 > [the design spec](docs/superpowers/specs/2026-08-20-sre-book-builder-design.md).
 
 ## Using it
@@ -90,12 +90,27 @@ archival storage; a clone will not have them. Sample material used during develo
 srebook/core/     the pipeline: ingest, prepare, ocr, outline, assemble
 srebook/cli.py    command line front end
 srebook/gui/      Tkinter interface (grid.py holds the rules, app.py the widgets)
-tests/            165 tests, no image fixtures or display required
-packaging/        PyInstaller spec, Inno Setup script   [not yet written]
+tests/            183 tests, no image fixtures or display required
+packaging/        vendoring, PyInstaller spec, Inno Setup script, sandbox test
 docs/
   superpowers/specs/    design documents
 CLAUDE.md         working guidance and hard constraints
 ```
+
+## Building the installer
+
+```
+py packaging/build.py
+```
+
+Produces `dist/SREBookBuilder-0.1.0-setup.exe` (64 MB), which installs per-user and
+needs no administrator — usually the obstacle to getting a tool onto a library
+workstation. It bundles its own Tesseract and never uses one it finds on the machine.
+
+`py packaging/make_sandbox.py` writes `dist/clean-test.wsb`. Double-clicking it opens
+Windows Sandbox — a pristine, disposable Windows with no Python and no Tesseract, and
+with networking switched off — installs the app, and builds a real issue. That is the
+only environment in which "the installer works" means anything.
 
 ## Development
 

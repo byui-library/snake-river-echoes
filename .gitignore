@@ -15,6 +15,7 @@ image files/
 output/
 build/
 dist/
+sandbox-results/
 *.spec.bak
 Output/          # Inno Setup default output dir
 *.pdf
@@ -27,7 +28,9 @@ Output/          # Inno Setup default output dir
 .ocr-cache/
 *.hocr
 
-# --- Bundled third-party binaries (fetched at package time, not committed) ----
+# --- Bundled third-party binaries (vendored at package time, not committed) ---
+# 172 MB of Tesseract, reproduced by packaging/vendor_tesseract.py
+srebook/vendor/
 packaging/vendor/
 tessdata/
 

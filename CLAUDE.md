@@ -10,8 +10,9 @@ scans into a single searchable, bookmarked, page-labeled PDF.
 Built for digitizing *Snake River Echoes*, the journal of the Upper Snake River Valley
 Historical Society, but intended to be handed to other archives as an installer.
 
-**Current state: pipeline, CLI and GUI work.** What remains is packaging: bundling
-Tesseract and building the installer.
+**Current state: everything is built.** A 64 MB installer exists; what remains is
+running it on a machine that has never had development tools, which is what
+`dist/clean-test.wsb` does.
 
 The authoritative design is
 [docs/superpowers/specs/2026-08-20-sre-book-builder-design.md](docs/superpowers/specs/2026-08-20-sre-book-builder-design.md).
@@ -102,13 +103,33 @@ py -m pytest                                                 # 165 tests, ~22s
 
 Drafting an issue takes about 80 seconds; building from cached OCR is near-instant.
 
+## Packaging
+
+```
+py packaging/build.py       # vendor Tesseract, freeze, compile installer, write .wsb
+```
+
+Then double-click `dist/clean-test.wsb` to run the whole thing in Windows Sandbox.
+
+- **Tesseract is never handed to PyInstaller.** PyInstaller reclassifies loose DLLs as
+  binaries and copies them to `_internal/` *as well as* the data destination — 130 MB
+  duplicated, a 409 MB app instead of 90 MB. The installer lays `vendor/tesseract` down
+  beside the exe, and `ocr.bundle_candidates` checks there first.
+- **`tessdata/configs/` is not optional.** `hocr` on the Tesseract command line names
+  `configs/hocr`, not a built-in flag. Without it Tesseract exits 0, silently writes plain
+  text, and the pipeline finds no `.hocr` file. `vendor_tesseract.py` asserts it is there.
+- **A packaged build never falls back to PATH.** Otherwise a build that bundled no
+  Tesseract works perfectly on any developer machine and fails on the first archive
+  workstation. `srebook doctor` reports which binary was resolved so a test can assert it.
+
 ## Environment notes
 
 - Windows. The Bash tool is Git Bash; PowerShell is also available.
 - **`python` on PATH is the Microsoft Store shim and does not work.** Use the real one:
   `/c/Users/milesm/AppData/Local/Programs/Python/Python313/python.exe` (3.13.15), or `py`.
-- Tesseract, Ghostscript, and ImageMagick are **not** installed. `winget` and `choco` are
-  available. Note that `convert` on PATH is Windows' filesystem tool, not ImageMagick.
+- Tesseract, PyInstaller and Inno Setup are installed. Ghostscript and ImageMagick are
+  not, and must stay that way. Note that `convert` on PATH is Windows' filesystem tool,
+  not ImageMagick. ISCC lives at `~/AppData/Local/Programs/Inno Setup 6/ISCC.exe`.
 - Sample data lives in `Image Files/SRE Vol 1 Number 1/` — 22 TIFFs, 300 DPI grayscale
   LZW, ~103 MB. Untracked. Do not assume a clone has it.
 
@@ -119,7 +140,7 @@ Drafting an issue takes about 80 seconds; building from cached OCR is near-insta
 | 0 | hOCR-to-PDF spike proven on the real 22 pages | **done** — [findings](docs/superpowers/specs/2026-08-20-phase0-findings.md) |
 | 1 | Core + CLI; a finished Vol 1 No 1 PDF | **done** — 128 tests, real PDF built |
 | 2 | Tkinter GUI | **done** — 165 tests |
-| 3 | Inno Setup installer | not started |
+| 3 | Inno Setup installer | **built** — awaiting the clean-machine test |
 
 Keep this table current.
 
