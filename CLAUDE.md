@@ -19,6 +19,49 @@ The authoritative design is
 Read it before making architectural decisions. If code and spec disagree, that is a bug in
 one of them — resolve it explicitly rather than silently following the code.
 
+## Next session — start here
+
+**Windows Sandbox was enabled on 2026-08-20 and needs a reboot to finish.** If
+`C:\Windows\System32\WindowsSandbox.exe` now exists, the reboot happened.
+
+Then, from the repository root:
+
+```
+py packaging/build.py            # ~3 min: vendor, freeze, compile, write the .wsb
+```
+then double-click `dist/clean-test.wsb`.
+
+A pristine Windows opens with no Python, no Tesseract and networking disabled,
+installs the app, and builds Vol 1 No 1. It writes a pass/fail report and the
+finished PDF to `sandbox-results/`.
+
+**Read `sandbox-results/clean-machine-test.txt` and act on it.** Expect failures on
+the first run; installers usually have one surprise. The test checks the machine
+really is clean before it concludes anything, so a pass means something.
+
+### What is and is not verified
+
+| Claim | Status |
+|---|---|
+| Text layer lands on the words | verified — 99.42% of 11,216 words, PDFium |
+| Outline, page labels, metadata, search | verified on the real issue |
+| GUI behaviour | verified structurally; **never seen on screen by Claude** |
+| Strict bundling refuses a system Tesseract | verified — frozen exe exits 1 on this machine |
+| **Installer works on a machine with no dev tools** | **NOT VERIFIED — this is the open item** |
+
+Do not describe the installer as working on a clean machine until that report says
+so. Everything else about this project has been checked against real data; this is
+the one claim still resting on nothing.
+
+### If Sandbox turns out to be blocked
+
+The workstation is MECM/SCCM-managed, so Group Policy could revert the feature.
+If it is gone or refuses to launch, that is an IT conversation, not something to
+work around. The fallback is any spare machine or VM that has never had Python or
+Tesseract on it. Do **not** substitute a test on this machine and call it
+equivalent — this machine has Tesseract installed, which is precisely what the
+test is designed to rule out.
+
 ## Hard constraints
 
 These are not preferences. Violating one breaks a promise the project has made.
