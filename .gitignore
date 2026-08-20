@@ -1,0 +1,56 @@
+# --- Scanned source material -------------------------------------------------
+# Page scans are NOT version controlled. They are large (~100 MB per issue) and
+# the TIFFs are the preservation master -- they belong in archival storage, not
+# in git history. See docs/superpowers/specs/ for the rationale.
+Image Files/
+image files/
+*.tif
+*.tiff
+
+# Small, downsampled test fixtures ARE tracked -- they make the test suite real.
+!tests/fixtures/**/*.tif
+!tests/fixtures/**/*.tiff
+
+# --- Build output -------------------------------------------------------------
+output/
+build/
+dist/
+*.spec.bak
+Output/          # Inno Setup default output dir
+*.pdf
+!docs/**/*.pdf
+
+# Per-issue sidecars are generated alongside output
+*.srebook.json
+
+# --- OCR cache ----------------------------------------------------------------
+.ocr-cache/
+*.hocr
+
+# --- Bundled third-party binaries (fetched at package time, not committed) ----
+packaging/vendor/
+tessdata/
+
+# --- Python -------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# --- Editors / tooling --------------------------------------------------------
+.qodo/
+.vscode/
+.idea/
+*.swp
+
+# --- OS -----------------------------------------------------------------------
+Thumbs.db
+desktop.ini
+.DS_Store

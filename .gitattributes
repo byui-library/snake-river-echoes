@@ -1,0 +1,10 @@
+* text=auto
+
+*.py    text diff=python
+*.md    text
+*.iss   text
+
+*.tif   binary
+*.tiff  binary
+*.pdf   binary
+*.traineddata binary
