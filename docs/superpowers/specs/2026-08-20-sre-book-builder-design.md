@@ -124,7 +124,9 @@ save-file, so a half-reviewed issue survives a crash or a shift change.
 ### Page labels
 
 The operator supplies one number: which sheet carries printed page 1
-(`body_starts_at_sheet`). Front-matter extent is derived from it, never stored separately. Sheets before it are
+(`body_starts_at_sheet`). Phase 0 found that body sheets print their page number as the
+first line, so this field is **pre-filled by detection** and the operator only overrides it
+when detection is wrong. Front-matter extent is derived from it, never stored separately. Sheets before it are
 labeled lowercase roman (`i`, `ii`, …); the body is labeled decimal starting at its printed
 number. Written as a PDF `/PageLabels` number tree. Result: Acrobat's page box reads
 `7 (9 of 22)`.
@@ -138,11 +140,27 @@ field stays editable — other archives will not use this naming convention.
 
 ### TOC parser
 
-Runs on OCR text of the sheets before the body. Matches the leader-dot pattern
-(`Fort Hall Reminiscences ....... 7`) plus tab and whitespace-column variants, then maps
-printed page numbers to sheet numbers using the page-label offset. It is a head start,
-not a dependency: the operator corrects the grid, and finding nothing simply yields an
-empty grid.
+> **Revised after the Phase 0 spike.** The original leader-dot approach was tested against
+> the real contents page and does not work. See
+> [Phase 0 findings](2026-08-20-phase0-findings.md).
+
+Two stages, neither of which reads a page number off the contents page:
+
+1. **Extract candidate titles.** On the sheets before the body, cut each line at its dot
+   leader and keep the lines that are overwhelmingly uppercase. Capitalization must be
+   tested on the *raw* line — stripping lowercase first turns author credits like
+   `by Harold S. Forbush` into plausible-looking initials.
+2. **Locate each title in the body.** Article titles appear verbatim where the article
+   begins, so the sheet number comes from finding the title, not from reading a printed
+   page number.
+
+Tesseract reads rows of periods as random letters and swallows the trailing page number
+with them, so leader-dot parsing recovers titles but not numbers. Title location recovered
+6 of 8 articles exactly on the test issue; the two misses were section labels never printed
+in the body.
+
+It remains a head start, not a dependency: the operator corrects the grid, and finding
+nothing simply yields an empty grid.
 
 ## GUI
 

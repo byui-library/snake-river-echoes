@@ -102,9 +102,30 @@ editing a bookmark and rebuilding must never re-OCR.
 
 | Phase | Deliverable | Status |
 |---|---|---|
-| 0 | hOCR-to-PDF spike proven on the real 22 pages | not started |
+| 0 | hOCR-to-PDF spike proven on the real 22 pages | **done** — [findings](docs/superpowers/specs/2026-08-20-phase0-findings.md) |
 | 1 | Core + CLI; a finished Vol 1 No 1 PDF | not started |
 | 2 | Tkinter GUI | not started |
 | 3 | Inno Setup installer | not started |
 
 Keep this table current.
+
+## Phase 0 results carried into Phase 1
+
+Proven: 9.96 MB output from 107 MB of TIFFs, OCR confidence 94.1 on body sheets, and
+**99.42% of words exactly recoverable at their own location** in the finished PDF.
+
+Non-obvious things the spike established — read the findings doc before writing
+`core/ocr.py`, `core/outline.py`, or `core/assemble.py`:
+
+- **Set text on the baseline, not the box bottom.** hOCR word boxes span ascender to
+  descender. Using the bottom put every word 1.73 pt low. Read the `baseline` coefficients
+  from the enclosing `ocr_line` and derive font size from the measured ascent.
+- **Encode content streams as cp1252, not latin-1.** The font declares WinAnsiEncoding;
+  latin-1 has no curly quotes, so apostrophes silently became `?`.
+- **`U+FFFE` from PDFium is not a defect.** It is PDFium's marker for a hyphen at a line
+  break. The alignment test must treat it as a hyphen or it will report ~38 false failures.
+- **Drop words below confidence 30.** Non-text pages generate noise words that pollute
+  search results.
+- **The TOC leader-dot heuristic in the original spec does not work** and has been replaced
+  by title-location. Tesseract reads dot leaders as random letters and swallows the page
+  number with them.
