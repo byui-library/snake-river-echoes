@@ -497,3 +497,16 @@ def test_the_word_contents_in_running_prose_is_not_a_marker():
               2: ["we catalogued the contents of the collection in detail"]}
 
     assert outline.find_contents_sheet(sheets) == 1
+
+
+def test_the_contents_sheet_is_reported_as_undetected_when_absent():
+    """find_contents_sheet falls back to the first sheet so the title search
+    has somewhere to start. The caller still needs to know it was a fallback,
+    or it would bookmark sheet 1 as a contents page that does not exist."""
+    assert outline.detect_contents_sheet({1: ["COVER"], 2: ["prose"]}) is None
+
+
+def test_the_contents_sheet_is_reported_when_present():
+    sheets = {1: ["COVER"], 2: ["CONTENTS", "ORAL HISTORY"], 3: ["ORAL HISTORY"]}
+
+    assert outline.detect_contents_sheet(sheets) == 2

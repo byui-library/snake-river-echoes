@@ -19,6 +19,14 @@ Progress = Callable[[int, int, str], None]
 OUTPUT_DIRNAME = "output"
 CACHE_DIRNAME = ".cache"
 FRONT_MATTER_SEARCH_SHEETS = 4  # the contents page is never deep into an issue
+FRONT_COVER_TITLE = "Front Cover"
+CONTENTS_TITLE = "Table of Contents"
+# Contents entries that merely name the front matter we bookmark ourselves.
+FRONT_MATTER_TITLES = {"COVER", "FRONTCOVER", "CONTENTS", "TABLEOFCONTENTS"}
+
+
+def _normalise_title(title: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", title.upper())
 
 
 class PipelineError(Exception):
@@ -133,6 +141,7 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
                   embed_dpi=embed_dpi)
 
     contents_sheet = outline.find_contents_sheet(text)
+    detected_contents = outline.detect_contents_sheet(text)
     # Candidates come from the front matter only. Reading further would pick up
     # article headings as titles in their own right, so an article whose heading
     # is punctuated differently from its contents entry ("A GOAL IS ACHIEVED"
@@ -160,7 +169,19 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
         if title not in placed and title not in titles:
             titles.append(title)
 
+    # The front matter is known, not guessed: sheet 1 is the cover, and the
+    # contents sheet was found in order to search past it. Leaving these for
+    # the operator to place by hand was needless work.
+    if detected_contents is not None and detected_contents > 1:
+        issue.bookmarks.append(Bookmark(FRONT_COVER_TITLE, 1))
+    if detected_contents is not None:
+        issue.bookmarks.append(Bookmark(CONTENTS_TITLE, detected_contents))
+
     for title, sheet in outline.locate_titles(titles, body):
+        if _normalise_title(title) in FRONT_MATTER_TITLES:
+            # Several issues list COVER on the contents page, describing the
+            # artwork. That is the bookmark we have already made.
+            continue
         # An unlocated title is parked on sheet 1 rather than dropped -- the
         # operator needs to see it in the grid to place it -- and flagged, so
         # nothing downstream has to guess which sheet-1 entries are unplaced.

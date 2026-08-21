@@ -199,15 +199,25 @@ def _loose_title_from_line(raw: str) -> str | None:
     return title
 
 
-def find_contents_sheet(sheets: dict[int, list[str]]) -> int:
-    """The sheet carrying the printed contents list.
-
-    Titles must be located in the *body*; searching from sheet 1 would match
-    each title against its own entry on the contents page.
-    """
+def detect_contents_sheet(sheets: dict[int, list[str]]) -> int | None:
+    """The sheet carrying the printed contents list, or None if there is none."""
     for sheet in sorted(s for s in sheets if s <= FRONT_MATTER_SHEETS):
         if _contents_line(sheets[sheet]) is not None:
             return sheet
+    return None
+
+
+def find_contents_sheet(sheets: dict[int, list[str]]) -> int:
+    """Where to start searching the body for titles.
+
+    Titles must be located in the *body*; searching from sheet 1 would match
+    each title against its own entry on the contents page. Falls back to the
+    first sheet, so callers that need to know whether a contents page really
+    exists should use detect_contents_sheet.
+    """
+    detected = detect_contents_sheet(sheets)
+    if detected is not None:
+        return detected
     return min(sheets) if sheets else 1
 
 

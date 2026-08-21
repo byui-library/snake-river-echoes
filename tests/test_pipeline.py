@@ -7,6 +7,10 @@ import pytest
 from srebook.core import pipeline
 from srebook.core.model import Bookmark, load_sidecar, save_sidecar
 
+# The drafter always bookmarks the front matter it can identify; tests about
+# article detection filter these out rather than restate them everywhere.
+FRONT_MATTER = {"Front Cover", "Table of Contents"}
+
 
 def hocr_page(lines_with_boxes) -> bytes:
     spans = []
@@ -113,8 +117,10 @@ def test_unlocated_titles_are_still_offered_to_the_operator(tmp_path, make_sheet
 
     issue = pipeline.draft(folder)
 
-    assert [b.title for b in issue.bookmarks] == ["IDAHO POETRY"]
-    assert issue.bookmarks[0].sheet == 1  # parked on sheet 1 for the operator
+    articles = [b for b in issue.bookmarks if b.title not in FRONT_MATTER]
+    assert [b.title for b in articles] == ["IDAHO POETRY"]
+    assert articles[0].sheet == 1  # parked on sheet 1 for the operator
+    assert articles[0].needs_review
 
 
 def test_draft_does_not_discard_operator_edits(issue_folder):
@@ -228,8 +234,9 @@ def test_a_body_heading_does_not_become_a_second_bookmark(tmp_path, make_sheet):
 
     issue = pipeline.draft(folder)
 
-    assert [b.title for b in issue.bookmarks] == ["A GOAL IS ACHIEVED"]
-    assert issue.bookmarks[0].sheet == 3
+    articles = [b for b in issue.bookmarks if b.title not in FRONT_MATTER]
+    assert [b.title for b in articles] == ["A GOAL IS ACHIEVED"]
+    assert articles[0].sheet == 3
 
 
 def test_draft_marks_only_the_titles_it_could_not_locate(tmp_path, make_sheet):
@@ -285,3 +292,63 @@ def test_a_title_case_contents_page_still_produces_bookmarks(tmp_path, make_shee
     assert ("A Critical Look at Historical Editing", 3) in titles
     assert not any("Volume 1" in t for t, _ in titles)
     assert not any(t.startswith("The editor") for t, _ in titles)
+
+
+def test_draft_bookmarks_the_cover_and_the_contents_page(issue_folder):
+    """The drafter knows where the contents page is -- it found it in order to
+    search past it -- and sheet 1 is the cover. Both were being left out of the
+    outline, or parked for the operator to place by hand."""
+    issue = pipeline.draft(issue_folder)
+
+    placed = [(b.title, b.sheet, b.needs_review) for b in issue.bookmarks]
+    assert ("Front Cover", 1, False) in placed
+    assert ("Table of Contents", 2, False) in placed
+
+
+def test_the_cover_and_contents_lead_the_outline(issue_folder):
+    issue = pipeline.draft(issue_folder)
+
+    assert [b.title for b in issue.bookmarks][:2] == ["Front Cover", "Table of Contents"]
+
+
+def test_a_contents_entry_describing_the_cover_is_not_duplicated(tmp_path, make_sheet):
+    """Several issues list COVER on the contents page, describing the artwork.
+    That must not produce a second cover bookmark."""
+    folder = tmp_path / "issue"
+    folder.mkdir()
+    for n in (1, 2, 3):
+        src = make_sheet(name=f"V_{n:02d}.tif")
+        src.replace(folder / src.name)
+    cache = pipeline.cache_dir(folder)
+    cache.mkdir(parents=True)
+    (cache / "V_01.hocr").write_bytes(hocr_page([("THE QUARTERLY", (200, 300, 1400, 360))]))
+    (cache / "V_02.hocr").write_bytes(hocr_page([
+        ("CONTENTS", (200, 300, 900, 360)),
+        ("ORAL HISTORY", (200, 400, 1400, 460)),
+        ("COVER", (200, 500, 900, 560))]))
+    (cache / "V_03.hocr").write_bytes(hocr_page([("ORAL HISTORY", (200, 300, 1400, 360))]))
+
+    issue = pipeline.draft(folder)
+
+    titles = [b.title for b in issue.bookmarks]
+    assert titles.count("Front Cover") == 1
+    assert "COVER" not in titles
+    assert titles.count("Table of Contents") == 1
+
+
+def test_no_contents_bookmark_when_there_is_no_contents_page(tmp_path, make_sheet):
+    """A folder of body scans with no front matter must not gain a bookmark
+    pointing at a contents page that does not exist."""
+    folder = tmp_path / "issue"
+    folder.mkdir()
+    for n in (1, 2):
+        src = make_sheet(name=f"U_{n:02d}.tif")
+        src.replace(folder / src.name)
+    cache = pipeline.cache_dir(folder)
+    cache.mkdir(parents=True)
+    (cache / "U_01.hocr").write_bytes(hocr_page([("some prose here", (200, 300, 1400, 360))]))
+    (cache / "U_02.hocr").write_bytes(hocr_page([("more prose", (200, 300, 1400, 360))]))
+
+    issue = pipeline.draft(folder)
+
+    assert "Table of Contents" not in [b.title for b in issue.bookmarks]
