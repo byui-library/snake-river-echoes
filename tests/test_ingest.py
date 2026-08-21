@@ -76,3 +76,48 @@ def test_metadata_guess_ignores_a_year_like_number_in_a_page_position(tmp_path):
     meta = ingest.guess_metadata(ingest.find_sheets(folder))
 
     assert meta.year is None
+
+
+def make_multipage(path, pages=5):
+    from PIL import Image
+    frames = [Image.new("L", (60, 80), 255 - i * 10) for i in range(pages)]
+    frames[0].save(path, save_all=True, append_images=frames[1:], compression="tiff_lzw")
+    return path
+
+
+def test_a_multipage_tiff_is_refused_rather_than_silently_truncated(tmp_path):
+    """One TIFF holding a whole issue read as a single sheet, and the other 21
+    pages vanished with no warning. Losing pages quietly is the worst thing this
+    program could do."""
+    make_multipage(tmp_path / "whole_issue.tif", pages=22)
+
+    with pytest.raises(ingest.IngestError) as e:
+        ingest.find_sheets(tmp_path)
+
+    message = str(e.value)
+    assert "whole_issue.tif" in message
+    assert "22" in message
+
+
+def test_the_refusal_says_what_to_do_about_it(tmp_path):
+    make_multipage(tmp_path / "issue.tif", pages=4)
+
+    with pytest.raises(ingest.IngestError) as e:
+        ingest.find_sheets(tmp_path)
+
+    assert "one page per file" in str(e.value).lower()
+
+
+def test_ordinary_single_page_scans_are_unaffected(tmp_path):
+    from PIL import Image
+    for n in range(1, 4):
+        Image.new("L", (60, 80), 255).save(tmp_path / f"p_{n:02d}.tif")
+
+    assert len(ingest.find_sheets(tmp_path)) == 3
+
+
+def test_a_file_that_cannot_be_opened_does_not_stop_the_check(tmp_path):
+    """A corrupt file is prepare's problem to report, not ingest's."""
+    (tmp_path / "broken.tif").write_bytes(b"not a tiff at all")
+
+    assert [p.name for p in ingest.find_sheets(tmp_path)] == ["broken.tif"]

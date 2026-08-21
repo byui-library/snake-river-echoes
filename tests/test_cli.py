@@ -160,3 +160,37 @@ def test_draft_states_the_page_mapping_accurately(issue_folder, capsys):
     out = capsys.readouterr().out
     assert "27" in out
     assert "Printed p.1  sheet 1" not in out
+
+
+def test_pages_lists_the_reading_order(issue_folder, capsys):
+    """An operator reported pages not coming in as their file names implied.
+    There was no way to see what order the program had actually chosen."""
+    code = cli.main(["pages", str(issue_folder)])
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "SRE_1971_Vol1_No1_01.tif" in out
+    assert "sheet" in out.lower()
+
+
+def test_pages_shows_the_printed_page_each_sheet_will_carry(issue_folder, capsys):
+    from srebook.core.model import load_sidecar, save_sidecar
+    cli.main(["draft", str(issue_folder)])
+    path = pipeline.sidecar_path(issue_folder)
+    issue = load_sidecar(path)
+    issue.body_starts_at_sheet, issue.body_starts_at_printed = 1, 27
+    save_sidecar(issue, path)
+    capsys.readouterr()
+
+    cli.main(["pages", str(issue_folder)])
+
+    out = capsys.readouterr().out
+    assert "27" in out and "32" in out
+
+
+def test_pages_refuses_a_folder_with_no_scans(tmp_path, capsys):
+    (tmp_path / "empty").mkdir()
+
+    code = cli.main(["pages", str(tmp_path / "empty")])
+
+    assert code != 0

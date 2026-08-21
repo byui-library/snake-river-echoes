@@ -51,7 +51,34 @@ def find_sheets(folder: Path) -> list[Path]:
         p for p in folder.iterdir()
         if p.is_file() and p.suffix.lower() in TIFF_SUFFIXES
     ]
-    return sorted(sheets, key=_natural_key)
+    sheets = sorted(sheets, key=_natural_key)
+    _refuse_multipage(sheets)
+    return sheets
+
+
+def _refuse_multipage(sheets: list[Path]) -> None:
+    """A TIFF can hold many pages, and some scanners write a whole issue into
+    one file. Every stage here treats a file as a sheet, so such a file would be
+    read as its first page and the rest would vanish without a word.
+
+    Refusing is not the ideal answer -- reading the pages out would be -- but
+    losing pages quietly is the worst thing this program could do, and a person
+    can split the file in a minute.
+    """
+    from PIL import Image, UnidentifiedImageError
+
+    for path in sheets:
+        try:
+            with Image.open(path) as image:
+                frames = getattr(image, "n_frames", 1)
+        except (UnidentifiedImageError, OSError):
+            continue  # a corrupt file is prepare's to report, with its name
+        if frames > 1:
+            raise IngestError(
+                f"{path.name} holds {frames} pages in one file. This program "
+                "needs one page per file, so that each scan is a sheet it can "
+                "bookmark and label. Split the file and try again."
+            )
 
 
 def guess_metadata(sheets: list[Path]) -> IssueMetadata:

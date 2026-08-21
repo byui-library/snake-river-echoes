@@ -67,6 +67,31 @@ def _cmd_build(args) -> int:
     return 0
 
 
+def _cmd_pages(args) -> int:
+    """Show the order the scans will be read in, and what each sheet will be
+    labelled. Exists because an operator reported pages not arriving as their
+    file names implied, and there was no way to see what order was chosen.
+    """
+    folder = Path(args.folder)
+    sheets = pipeline._sheets(folder)
+
+    labels = []
+    side = pipeline.sidecar_path(folder)
+    if side.exists():
+        from .core.model import page_labels
+        labels = page_labels(load_sidecar(side), len(sheets))
+
+    print(f"\n{len(sheets)} scans in {folder.name}, in reading order:\n")
+    print(f"  {'sheet':>5}  {'printed page':>12}  file")
+    for i, path in enumerate(sheets, start=1):
+        printed = labels[i - 1] if labels else "-"
+        print(f"  {i:>5}  {printed:>12}  {path.name}")
+
+    if not labels:
+        print("\nNo draft yet, so printed page numbers are not known.")
+    return 0
+
+
 def _cmd_doctor(_args) -> int:
     """Report what this copy of the program can actually do.
 
@@ -129,6 +154,11 @@ def main(argv: list[str] | None = None) -> int:
     build.add_argument("--force", action="store_true",
                        help="build even though some bookmarks are unreviewed")
     build.set_defaults(func=_cmd_build)
+
+    pages = sub.add_parser(
+        "pages", help="show the reading order of the scans and their page numbers")
+    pages.add_argument("folder", help="folder of TIFF page scans")
+    pages.set_defaults(func=_cmd_pages)
 
     doctor = sub.add_parser(
         "doctor", help="check this installation can read scans and build PDFs")
