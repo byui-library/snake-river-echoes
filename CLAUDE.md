@@ -10,9 +10,12 @@ scans into a single searchable, bookmarked, page-labeled PDF.
 Built for digitizing *Snake River Echoes*, the journal of the Upper Snake River Valley
 Historical Society, but intended to be handed to other archives as an installer.
 
-**Current state: everything is built.** A 64 MB installer exists; what remains is
-running it on a machine that has never had development tools, which is what
-`dist/clean-test.wsb` does.
+**Current state: all four phases are done and verified**, including the installer on a
+pristine Windows with no Python and no Tesseract (2026-08-21).
+
+The next real unknown is whether the outline parser generalises: every heuristic in
+`core/outline.py` was tuned against Vol 1 No 1. A second issue is the highest-value
+next test.
 
 The authoritative design is
 [docs/superpowers/specs/2026-08-20-sre-book-builder-design.md](docs/superpowers/specs/2026-08-20-sre-book-builder-design.md).
@@ -21,46 +24,27 @@ one of them — resolve it explicitly rather than silently following the code.
 
 ## Next session — start here
 
-**Windows Sandbox was enabled on 2026-08-20 and needs a reboot to finish.** If
-`C:\Windows\System32\WindowsSandbox.exe` now exists, the reboot happened.
+Everything is built and verified. `py -m pytest` (185 tests) and
+`py packaging/build.py` both work from a clean checkout plus the sample scans.
 
-Then, from the repository root:
+**The open question is generalisation.** Every rule in `core/outline.py` was tuned
+against a single issue: titles are ALL-CAPS on the contents page, and reappear
+verbatim where the article begins. Whether that holds for Vol 1 No 2, or a 1985
+issue with a different typesetter, is untested. Expect to loosen the heuristics.
 
-```
-py packaging/build.py            # ~3 min: vendor, freeze, compile, write the .wsb
-```
-then double-click `dist/clean-test.wsb`.
+Also untested: **an issue containing photographs.** Vol 1 No 1 is typewritten text
+with a line-drawing cover, so the 200 DPI embed decision has never been judged
+against a halftone.
 
-A pristine Windows opens with no Python, no Tesseract and networking disabled,
-installs the app, and builds Vol 1 No 1. It writes a pass/fail report and the
-finished PDF to `sandbox-results/`.
+### Verified, with evidence
 
-**Read `sandbox-results/clean-machine-test.txt` and act on it.** Expect failures on
-the first run; installers usually have one surprise. The test checks the machine
-really is clean before it concludes anything, so a pass means something.
-
-### What is and is not verified
-
-| Claim | Status |
+| Claim | Evidence |
 |---|---|
-| Text layer lands on the words | verified — 99.42% of 11,216 words, PDFium |
-| Outline, page labels, metadata, search | verified on the real issue |
-| GUI behaviour | verified structurally; **never seen on screen by Claude** |
-| Strict bundling refuses a system Tesseract | verified — frozen exe exits 1 on this machine |
-| **Installer works on a machine with no dev tools** | **NOT VERIFIED — this is the open item** |
-
-Do not describe the installer as working on a clean machine until that report says
-so. Everything else about this project has been checked against real data; this is
-the one claim still resting on nothing.
-
-### If Sandbox turns out to be blocked
-
-The workstation is MECM/SCCM-managed, so Group Policy could revert the feature.
-If it is gone or refuses to launch, that is an IT conversation, not something to
-work around. The fallback is any spare machine or VM that has never had Python or
-Tesseract on it. Do **not** substitute a test on this machine and call it
-equivalent — this machine has Tesseract installed, which is precisely what the
-test is designed to rule out.
+| Text layer lands on the words | 99.42% of 11,216 words recoverable at their own location, PDFium |
+| Outline, page labels, metadata, search | checked on the real issue; Ctrl-F confirmed by the operator |
+| Deskew applied to both derivatives | test, and the constraint is documented below |
+| Packaged build refuses a system Tesseract | frozen exe exits 1 on this machine, which has one installed |
+| Installer works with no dev tools | [clean-machine test](docs/superpowers/specs/2026-08-21-clean-machine-test-pass.txt), Windows Sandbox, networking off |
 
 ## Hard constraints
 
@@ -141,7 +125,7 @@ editing a bookmark and rebuilding must never re-OCR.
 py -m srebook.cli draft "Image Files/SRE Vol 1 Number 1"    # OCR + propose outline
 py -m srebook.cli build "Image Files/SRE Vol 1 Number 1"    # after reviewing the sidecar
 py -m srebook.gui                                            # the window
-py -m pytest                                                 # 165 tests, ~22s
+py -m pytest                                                 # 185 tests, ~15s
 ```
 
 Drafting an issue takes about 80 seconds; building from cached OCR is near-instant.
@@ -183,7 +167,7 @@ Then double-click `dist/clean-test.wsb` to run the whole thing in Windows Sandbo
 | 0 | hOCR-to-PDF spike proven on the real 22 pages | **done** — [findings](docs/superpowers/specs/2026-08-20-phase0-findings.md) |
 | 1 | Core + CLI; a finished Vol 1 No 1 PDF | **done** — 128 tests, real PDF built |
 | 2 | Tkinter GUI | **done** — 165 tests |
-| 3 | Inno Setup installer | **built** — awaiting the clean-machine test |
+| 3 | Inno Setup installer | **done** — [clean-machine test passed](docs/superpowers/specs/2026-08-21-clean-machine-test-pass.txt) |
 
 Keep this table current.
 

@@ -1,0 +1,67 @@
+SRE Book Builder - clean machine test
+Started Fri 08/21/2026 10:01:18.32
+
+=== 1. Confirm the machine really is clean ===
+  [ok]   no python on PATH
+  [ok]   no tesseract on PATH
+  [ok]   no system Tesseract installation
+
+=== 2. Install ===
+running C:\install\SREBookBuilder-0.1.0-setup.exe
+  [ok]   installer completed
+  [ok]   the window is installed
+  [ok]   the command line is installed
+  [ok]   Tesseract was bundled
+  [ok]   English language data present
+  [ok]   tessdata\configs\hocr present
+
+=== 3. Does it know what it is? ===
+SRE Book Builder
+  running     packaged
+  python      3.13.15
+  Pillow      12.3.0
+  pikepdf     10.12.0
+  lxml        5.3.0
+  tesseract   bundled
+              C:\Users\WDAGUtilityAccount\AppData\Local\Programs\SRE Book Builder\vendor\tesseract\tesseract.exe
+  languages   eng
+  [ok]   doctor passed
+  [ok]   using its OWN Tesseract, not one from the host
+  [ok]   reporting itself as a packaged build
+
+=== 4. Build a real issue ===
+copied scans to a writable folder
+  OCR 1/22  SRE_1971_Vol1_No1_01.tif                  OCR 2/22  SRE_1971_Vol1_No1_02.tif                  OCR 3/22  SRE_1971_Vol1_No1_03.tif                  OCR 4/22  SRE_1971_Vol1_No1_04.tif                  OCR 5/22  SRE_1971_Vol1_No1_05.tif                  OCR 6/22  SRE_1971_Vol1_No1_06.tif                  OCR 7/22  SRE_1971_Vol1_No1_07.tif                  OCR 8/22  SRE_1971_Vol1_No1_08.tif                  OCR 9/22  SRE_1971_Vol1_No1_09.tif                  OCR 10/22  SRE_1971_Vol1_No1_10.tif                  OCR 11/22  SRE_1971_Vol1_No1_11.tif                  OCR 12/22  SRE_1971_Vol1_No1_12.tif                  OCR 13/22  SRE_1971_Vol1_No1_13.tif                  OCR 14/22  SRE_1971_Vol1_No1_14.tif                  OCR 15/22  SRE_1971_Vol1_No1_15.tif                  OCR 16/22  SRE_1971_Vol1_No1_16.tif                  OCR 17/22  SRE_1971_Vol1_No1_17.tif                  OCR 18/22  SRE_1971_Vol1_No1_18.tif                  OCR 19/22  SRE_1971_Vol1_No1_19.tif                  OCR 20/22  SRE_1971_Vol1_No1_20.tif                  OCR 21/22  SRE_1971_Vol1_No1_21.tif                  OCR 22/22  SRE_1971_Vol1_No1_22.tif                  OCR 22/22 complete                                  
+
+Drafted SRE_1971_Vol1_No1.srebook.json
+  Issue        Vol. 1, No. 1 (1971)
+  Printed p.1  sheet 1
+  Bookmarks    8
+      sheet   3  A GOAL IS ACHIEVED
+      sheet   4  ORAL HISTORY
+      sheet   7  EASTERN IDAHO HISTORY FAIR - 1971
+      sheet   8  A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY
+      sheet  11  WHO AND WHAT IN IDAHO
+      sheet  11  ANDREW HENRY
+      sheet   1  IDAHO POETRY
+      sheet   1  COVER
+
+  These could not be located in the body and are parked on sheet 1.
+  Set their sheet numbers before building:
+      IDAHO POETRY
+      COVER
+
+Review C:\work\output\SRE_1971_Vol1_No1.srebook.json
+then run:  srebook build "C:\work"
+  [ok]   draft completed
+  OCR 1/22  SRE_1971_Vol1_No1_01.tif                  OCR 2/22  SRE_1971_Vol1_No1_02.tif                  OCR 3/22  SRE_1971_Vol1_No1_03.tif                  OCR 4/22  SRE_1971_Vol1_No1_04.tif                  OCR 5/22  SRE_1971_Vol1_No1_05.tif                  OCR 6/22  SRE_1971_Vol1_No1_06.tif                  OCR 7/22  SRE_1971_Vol1_No1_07.tif                  OCR 8/22  SRE_1971_Vol1_No1_08.tif                  OCR 9/22  SRE_1971_Vol1_No1_09.tif                  OCR 10/22  SRE_1971_Vol1_No1_10.tif                  OCR 11/22  SRE_1971_Vol1_No1_11.tif                  OCR 12/22  SRE_1971_Vol1_No1_12.tif                  OCR 13/22  SRE_1971_Vol1_No1_13.tif                  OCR 14/22  SRE_1971_Vol1_No1_14.tif                  OCR 15/22  SRE_1971_Vol1_No1_15.tif                  OCR 16/22  SRE_1971_Vol1_No1_16.tif                  OCR 17/22  SRE_1971_Vol1_No1_17.tif                  OCR 18/22  SRE_1971_Vol1_No1_18.tif                  OCR 19/22  SRE_1971_Vol1_No1_19.tif                  OCR 20/22  SRE_1971_Vol1_No1_20.tif                  OCR 21/22  SRE_1971_Vol1_No1_21.tif                  OCR 22/22  SRE_1971_Vol1_No1_22.tif                  OCR 22/22 complete                                  
+
+Built SRE_1971_Vol1_No1.pdf
+  C:\work\output\SRE_1971_Vol1_No1.pdf
+  9.96 MB, 8 bookmarks
+  [ok]   build completed
+  [ok]   produced SRE_1971_Vol1_No1.pdf  (9964258 bytes)
+
+=== Result ===
+RESULT: PASS - the installer works on a machine with nothing on it
+Finished Fri 08/21/2026 10:02:39.86

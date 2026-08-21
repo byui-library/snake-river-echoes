@@ -7,8 +7,9 @@ Built to digitize *Snake River Echoes*, the journal of the Upper Snake River Val
 Historical Society, and intended to be installed on archive workstations by staff who
 should not have to think about OCR.
 
-> **Status: everything is built, including a 64 MB Windows installer.** What remains
-> is running it on a machine that has never had development tools. See
+> **Status: complete and verified.** The installer has been tested on a pristine
+> Windows with no Python and no Tesseract and networking disabled — it installs,
+> uses its own bundled OCR engine, and builds a searchable 22-page PDF. See
 > [the design spec](docs/superpowers/specs/2026-08-20-sre-book-builder-design.md).
 
 ## Using it
