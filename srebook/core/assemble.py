@@ -181,7 +181,8 @@ def _add_metadata(pdf: pikepdf.Pdf, issue: Issue) -> None:
 def build_pdf(issue: Issue, pages: list[PageInput], output: Path) -> Path:
     problems = validate(issue, sheet_count=len(pages))
     if problems:
-        raise AssembleError(" ".join(problems))
+        # One per line: run together, six of these are an unreadable paragraph.
+        raise AssembleError("\n".join(problems))
 
     pdf = pikepdf.Pdf.new()
     page_objects = [_add_page(pdf, p) for p in pages]
