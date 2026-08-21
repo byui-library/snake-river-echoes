@@ -282,3 +282,22 @@ def test_metadata_survives_missing_optional_fields(tmp_path):
 
     with pikepdf.open(out) as pdf, pdf.open_metadata() as meta:
         assert meta["dc:title"] == "Untitled Scans"
+
+
+def test_a_bookmarked_pdf_opens_with_its_outline_showing(tmp_path):
+    """Without /PageMode a viewer picks its own panel -- usually thumbnails --
+    so the outline is there but invisible until the reader goes hunting for it.
+    The whole point of the outline is that it is the first thing you see."""
+    issue = an_issue(bookmarks=[Bookmark("Front Cover", 1), Bookmark("Andrew Henry", 2)])
+    out = build(tmp_path, issue, [page(), page()])
+
+    with pikepdf.open(out) as pdf:
+        assert str(pdf.Root.PageMode) == "/UseOutlines"
+
+
+def test_a_pdf_without_bookmarks_does_not_ask_for_an_outline_panel(tmp_path):
+    """Opening an empty outline panel looks broken."""
+    out = build(tmp_path, an_issue(bookmarks=[]), [page()])
+
+    with pikepdf.open(out) as pdf:
+        assert "/PageMode" not in pdf.Root.keys() or str(pdf.Root.PageMode) != "/UseOutlines"

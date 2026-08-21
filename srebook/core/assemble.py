@@ -141,6 +141,11 @@ def _add_outline(pdf: pikepdf.Pdf, issue: Issue, pages: list[pikepdf.Object]) ->
     outlines.First, outlines.Last, outlines.Count = first, last, count
     pdf.Root.Outlines = outlines
 
+    # Tell the viewer to open showing the outline. Without this a reader gets
+    # whichever panel the viewer prefers -- usually page thumbnails -- and the
+    # outline is present but invisible until they go looking for it.
+    pdf.Root.PageMode = pikepdf.Name.UseOutlines
+
 
 def _add_page_labels(pdf: pikepdf.Pdf, issue: Issue, sheet_count: int) -> None:
     """Ranges, not per-page entries: front matter roman, body decimal."""
