@@ -25,6 +25,7 @@ class Row:
     sheet: int
     level: int = 0
     needs_review: bool = False
+    review_reason: str = ""
 
 
 @dataclass
@@ -44,7 +45,7 @@ class OutlineGrid:
     def _flatten(bookmarks: list[Bookmark], level: int = 0) -> list[Row]:
         rows = []
         for b in bookmarks:
-            rows.append(Row(b.title, b.sheet, level, b.needs_review))
+            rows.append(Row(b.title, b.sheet, level, b.needs_review, b.review_reason))
             rows.extend(OutlineGrid._flatten(b.children, level + 1))
         return rows
 
@@ -54,7 +55,8 @@ class OutlineGrid:
         structure the model would reject."""
         top: list[Bookmark] = []
         for row in self.rows:
-            node = Bookmark(row.title, row.sheet, needs_review=row.needs_review)
+            node = Bookmark(row.title, row.sheet, needs_review=row.needs_review,
+                            review_reason=row.review_reason)
             if row.level > 0 and top:
                 top[-1].children.append(node)
             else:
@@ -186,12 +188,18 @@ class OutlineGrid:
         bookmark points at the cover or contents page.
         """
         row = self.rows[index]
-        return UNPLACED_SHEET if row.needs_review else str(row.sheet)
+        return UNPLACED_SHEET if self._sheet_is_a_guess(row) else str(row.sheet)
+
+    @staticmethod
+    def _sheet_is_a_guess(row: Row) -> bool:
+        """A suggested heading was read off that very sheet, so its number is
+        certain; only an unplaced title is parked somewhere arbitrary."""
+        return row.needs_review and row.review_reason != "suggested"
 
     def printed_display(self, index: int) -> str:
         """The printed page number for a row, for the column beside the sheet."""
         row = self.rows[index]
-        if row.needs_review:
+        if self._sheet_is_a_guess(row):
             return UNPLACED_SHEET
         printed = printed_for_sheet(self.issue, row.sheet)
         return UNPLACED_SHEET if printed is None else str(printed)

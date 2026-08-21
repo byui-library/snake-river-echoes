@@ -189,7 +189,8 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
         # rewritten behind their back on a later draft.
         issue.bookmarks.append(
             Bookmark(outline.title_case(title), sheet if sheet else 1,
-                     needs_review=sheet is None))
+                     needs_review=sheet is None,
+                     review_reason="unplaced" if sheet is None else ""))
 
     # Headings printed in the body that the contents page never listed: the
     # individual poems under a "POETRY" category, a book list headed something
@@ -197,7 +198,8 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
     # rather than from the issue's own table of contents.
     for title, sheet in outline.unclaimed_headings(
             body, [b.title for b in issue.bookmarks]):
-        issue.bookmarks.append(Bookmark(title, sheet, needs_review=True))
+        issue.bookmarks.append(
+            Bookmark(title, sheet, needs_review=True, review_reason="suggested"))
 
     issue.bookmarks.sort(key=lambda b: b.sheet)
 

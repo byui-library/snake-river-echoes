@@ -34,12 +34,23 @@ def _describe_draft(issue: Issue, folder: Path) -> None:
     for b in issue.bookmarks:
         print(f"      sheet {b.sheet:>3}  {b.title}")
 
-    unplaced = [b.title for b in issue.bookmarks if b.needs_review]
+    # Two different problems needing opposite advice: one wants a page number,
+    # the other wants a yes or no.
+    unplaced = [b.title for b in issue.bookmarks
+                if b.needs_review and b.review_reason != "suggested"]
     if unplaced:
-        print("\n  These could not be located in the body and are parked on sheet 1.")
-        print("  Set their sheet numbers before building:")
+        print("\n  These could not be located in the body, so their sheet is a guess.")
+        print("  Give them a page number before building:")
         for title in unplaced:
             print(f"      {title}")
+
+    suggested = [(b.title, b.sheet) for b in issue.bookmarks
+                 if b.needs_review and b.review_reason == "suggested"]
+    if suggested:
+        print("\n  These are printed in the issue but not listed on the contents")
+        print("  page. Keep or remove each one before building:")
+        for title, sheet in suggested:
+            print(f"      sheet {sheet:>3}  {title}")
 
     print(f"\nReview {pipeline.sidecar_path(folder)}")
     print(f'then run:  srebook build "{folder}"')

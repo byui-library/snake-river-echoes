@@ -21,11 +21,19 @@ class Bookmark:
     # sheet is a guess, and a person must confirm it. Recorded rather than
     # inferred from "sheet == 1", which mislabels a real Front Cover bookmark.
     needs_review: bool = False
+    # Why it wants a second look, because the two cases need opposite advice.
+    # "unplaced": the contents page named it but the body never did, so the
+    # sheet is a guess. "suggested": found printed on that sheet but never
+    # listed on the contents page, so the sheet is right and the question is
+    # whether it belongs in the outline at all.
+    review_reason: str = ""
 
     def to_dict(self) -> dict:
         d: dict = {"title": self.title, "sheet": self.sheet}
         if self.needs_review:
             d["needs_review"] = True
+            if self.review_reason:
+                d["review_reason"] = self.review_reason
         if self.children:
             d["children"] = [c.to_dict() for c in self.children]
         return d
@@ -37,6 +45,7 @@ class Bookmark:
             sheet=d["sheet"],
             children=[cls.from_dict(c) for c in d.get("children", [])],
             needs_review=d.get("needs_review", False),
+            review_reason=d.get("review_reason", ""),
         )
 
 
@@ -206,11 +215,17 @@ def validate(issue: Issue, sheet_count: int) -> list[str]:
                     f'Bookmark "{b.title}" points at sheet {b.sheet}, '
                     f"but this issue has {sheet_count} sheets."
                 )
-            if b.needs_review:
+            if b.needs_review and b.review_reason == "suggested":
+                problems.append(
+                    f'"{b.title}" is printed on sheet {b.sheet} but is not '
+                    "listed on the contents page. Confirm it to keep it as a "
+                    "bookmark, or remove it."
+                )
+            elif b.needs_review:
                 problems.append(
                     f'Bookmark "{b.title}" was not found in the body, so sheet '
                     f"{b.sheet} is only a guess. Confirm it if it is right, set "
-                    "the sheet it really starts on, or remove the bookmark."
+                    "the page it really starts on, or remove the bookmark."
                 )
             if b.children and depth >= MAX_DEPTH:
                 problems.append(

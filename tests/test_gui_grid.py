@@ -357,3 +357,21 @@ def test_an_unplaced_bookmark_shows_no_printed_page_either():
     g = a_paginated_grid([Bookmark("Poetry", 1, needs_review=True)])
 
     assert g.printed_display(0) == "—"
+
+
+def test_a_suggested_heading_shows_its_sheet():
+    """We know exactly where it is -- we read it there. Only an unplaced title
+    has a sheet worth hiding behind a dash."""
+    g = a_paginated_grid([Bookmark("Board of Directors", 24, needs_review=True,
+                                   review_reason="suggested")])
+
+    assert g.sheet_display(0) == "24"
+    assert g.printed_display(0) == "48"
+    assert g.needs_attention(0), "still wants a decision, just not about where"
+
+
+def test_an_unplaced_title_still_hides_its_placeholder_sheet():
+    g = a_paginated_grid([Bookmark("Idaho Poetry", 1, needs_review=True,
+                                   review_reason="unplaced")])
+
+    assert g.sheet_display(0) == "—"

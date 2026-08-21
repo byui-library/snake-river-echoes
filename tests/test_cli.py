@@ -194,3 +194,35 @@ def test_pages_refuses_a_folder_with_no_scans(tmp_path, capsys):
     code = cli.main(["pages", str(tmp_path / "empty")])
 
     assert code != 0
+
+
+def test_draft_separates_unplaced_titles_from_suggested_headings(tmp_path, make_sheet, capsys):
+    """They need opposite advice: one needs a page number, the other needs a
+    yes or no."""
+    from tests.test_pipeline import hocr_page
+    folder = tmp_path / "issue"
+    folder.mkdir()
+    for n in (1, 2, 3):
+        src = make_sheet(name=f"S_{n:02d}.tif")
+        src.replace(folder / src.name)
+    cache = pipeline.cache_dir(folder)
+    cache.mkdir(parents=True)
+    (cache / "S_01.hocr").write_bytes(hocr_page([("THE QUARTERLY", (200, 300, 1400, 360))]))
+    (cache / "S_02.hocr").write_bytes(hocr_page([
+        ("CONTENTS", (200, 300, 900, 360)),
+        ("IDAHO POETRY", (200, 400, 1400, 460))]))
+    (cache / "S_03.hocr").write_bytes(hocr_page([
+        ("BOARD OF DIRECTORS", (200, 300, 1500, 360)),
+        ("Harold Forbush, Chairman", (200, 400, 1800, 460))]))
+
+    cli.main(["draft", str(folder)])
+
+    out = capsys.readouterr().out
+    assert "could not be located" in out
+    assert "printed in the issue" in out
+
+    unplaced_section, suggested_section = out.split("printed in the issue")
+    unplaced_section = unplaced_section.split("could not be located")[1]
+    assert "Idaho Poetry" in unplaced_section
+    assert "Board of Directors" not in unplaced_section
+    assert "Board of Directors" in suggested_section

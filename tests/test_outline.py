@@ -627,3 +627,11 @@ def test_a_fragment_of_a_claimed_title_is_not_offered():
         body, claimed=["The Collection of Historical Documents: A Citizens Responsibility"])
 
     assert found == []
+
+
+def test_ocr_debris_is_stripped_from_a_suggested_heading():
+    """Real output: 'WESTERN HISTORY BOOKS é' -- a stray letter the scanner
+    found in the margin."""
+    body = {23: ["WESTERN HISTORY BOOKS \u00e9", "The following list of books"]}
+
+    assert outline.unclaimed_headings(body, claimed=[]) == [("Western History Books", 23)]

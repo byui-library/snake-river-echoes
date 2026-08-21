@@ -249,3 +249,46 @@ def test_a_single_bookmark_past_the_end_is_still_reported_plainly():
     problems = validate(issue, sheet_count=22)
 
     assert any("Nowhere" in p and "99" in p for p in problems)
+
+
+# ------------------------------- two different reasons to want a second look ----
+
+def test_an_unplaced_title_says_its_sheet_is_a_guess():
+    issue = an_issue(bookmarks=[Bookmark("Idaho Poetry", 1, needs_review=True,
+                                         review_reason="unplaced")])
+
+    message = validate(issue, sheet_count=22)[0]
+
+    assert "not found in the body" in message
+    assert "guess" in message
+
+
+def test_a_suggested_heading_says_where_it_was_found():
+    """It was found in the body -- that is where it came from. What is uncertain
+    is whether it is an article, not where it is. Telling the operator to 'set
+    the sheet it really starts on' is simply wrong for these."""
+    issue = an_issue(bookmarks=[Bookmark("Board of Directors", 24, needs_review=True,
+                                         review_reason="suggested")])
+
+    message = validate(issue, sheet_count=24)[0]
+
+    assert "sheet 24" in message
+    assert "not listed on the contents page" in message
+    assert "guess" not in message
+
+
+def test_the_reason_survives_the_sidecar(tmp_path):
+    issue = an_issue(bookmarks=[Bookmark("Board", 24, needs_review=True,
+                                         review_reason="suggested")])
+    path = tmp_path / "x.srebook.json"
+
+    save_sidecar(issue, path)
+
+    assert load_sidecar(path).bookmarks[0].review_reason == "suggested"
+
+
+def test_a_reviewed_bookmark_carries_no_reason(tmp_path):
+    path = tmp_path / "x.srebook.json"
+    save_sidecar(an_issue(bookmarks=[Bookmark("Cover", 1)]), path)
+
+    assert "review_reason" not in json.loads(path.read_text(encoding="utf-8"))["bookmarks"][0]

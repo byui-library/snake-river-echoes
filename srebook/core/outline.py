@@ -405,7 +405,13 @@ def unclaimed_headings(sheets: dict[int, list[str]],
         # matches it from either end -- check containment both ways.
         if any(key in c or c in key for c in already):
             continue
-        found.append((title_case(text_of[key].strip(" .,:;-")), min(on_sheets)))
+        heading = text_of[key].strip(" .,:;-").split()
+        # A stray letter the scanner found in the margin: "WESTERN HISTORY
+        # BOOKS e". Never strip below two words, or a real one-word heading
+        # would disappear.
+        while len(heading) > 2 and len([c for c in heading[-1] if c.isalpha()]) <= 1:
+            heading.pop()
+        found.append((title_case(" ".join(heading)), min(on_sheets)))
     return sorted(found, key=lambda pair: pair[1])
 
 
