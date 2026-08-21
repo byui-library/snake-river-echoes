@@ -77,6 +77,31 @@ for %%P in (C:\work\output\*.pdf) do set PDF=%%P
 if not defined PDF call :fail "no PDF was produced"
 if defined PDF call :report_pdf
 
+call :section "5. Notice an issue that is missing pages"
+REM Vol 1 No 2 is missing printed pages 27 and 28. A build that cannot spot
+REM that would let an archivist publish an incomplete book believing it whole,
+REM so the clean machine must prove it still spots it once packaged.
+if not exist C:\scans-with-a-gap\*.tif call :note "no gap-check scans mapped - skipping"
+if not exist C:\scans-with-a-gap\*.tif goto :summary
+if exist C:\gapwork rmdir /s /q C:\gapwork
+mkdir C:\gapwork
+copy /y C:\scans-with-a-gap\*.tif C:\gapwork\ >nul
+
+"%APP%\srebook.exe" draft C:\gapwork > C:\results\gap-draft.txt 2>&1
+set RC=%ERRORLEVEL%
+if "%RC%"=="0" call :pass "read the issue with the gap"
+if not "%RC%"=="0" call :fail "draft of the gapped issue failed (exit %RC%)"
+
+findstr /c:"no scan in this folder carries" C:\results\gap-draft.txt >nul
+set GRC=%ERRORLEVEL%
+if "%GRC%"=="0" call :pass "warned that pages are missing from the scan"
+if not "%GRC%"=="0" call :fail "did NOT warn about the missing pages"
+
+findstr /c:"27, 28" C:\results\gap-draft.txt >nul
+set NRC=%ERRORLEVEL%
+if "%NRC%"=="0" call :pass "named the missing pages: 27, 28"
+if not "%NRC%"=="0" call :fail "did not name pages 27 and 28"
+
 :summary
 call :section "Result"
 REM Derive the verdict from what was actually recorded. A counter can be lost
