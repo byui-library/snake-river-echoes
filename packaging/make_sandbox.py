@@ -47,8 +47,20 @@ TEMPLATE = """<Configuration>
 """
 
 
+def newest_installer(folder):
+    """The installer just built, not whichever one the glob happens to yield.
+
+    An older build left beside a new one was being picked up: the build script
+    printed the wrong version, and the clean-machine test would have installed
+    a stale binary and reported it as passing.
+    """
+    found = sorted(folder.glob("SREBookBuilder-*-setup.exe"),
+                   key=lambda p: p.stat().st_mtime, reverse=True)
+    return found[0] if found else None
+
+
 def main() -> int:
-    installer = next(DIST.glob("SREBookBuilder-*-setup.exe"), None)
+    installer = newest_installer(DIST)
     if installer is None:
         raise SystemExit(
             "No installer found in dist/. Build it first:\n"

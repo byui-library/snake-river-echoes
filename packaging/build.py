@@ -30,6 +30,18 @@ def run(command: list[str]) -> None:
         raise SystemExit(f"failed: {' '.join(str(c) for c in command)}")
 
 
+def newest_installer(folder):
+    """The installer just built, not whichever one the glob happens to yield.
+
+    An older build left beside a new one was being picked up: the build script
+    printed the wrong version, and the clean-machine test would have installed
+    a stale binary and reported it as passing.
+    """
+    found = sorted(folder.glob("SREBookBuilder-*-setup.exe"),
+                   key=lambda p: p.stat().st_mtime, reverse=True)
+    return found[0] if found else None
+
+
 def main() -> int:
     step(1, "vendor Tesseract")
     run([sys.executable, "packaging/vendor_tesseract.py"])
@@ -52,7 +64,7 @@ def main() -> int:
     step(4, "write the clean-machine test configuration")
     run([sys.executable, "packaging/make_sandbox.py"])
 
-    installer = next((ROOT / "dist").glob("SREBookBuilder-*-setup.exe"))
+    installer = newest_installer(ROOT / "dist")
     print(f"\nInstaller: {installer}  ({installer.stat().st_size / 1e6:.0f} MB)")
     print("Test it on a clean machine by double-clicking dist/clean-test.wsb")
     return 0
