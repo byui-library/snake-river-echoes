@@ -115,7 +115,8 @@ only environment in which "the installer works" means anything.
 
 ## For operators
 
-[docs/operator-guide.md](docs/operator-guide.md) — a printable page for the staff who
+[docs/operator-guide.pdf](docs/operator-guide.pdf) (print this) or
+[the Markdown source](docs/operator-guide.md) — a page for the staff who
 will run this: the flow, what a red bookmark means, and the difference between a sheet
 and a printed page.
 
