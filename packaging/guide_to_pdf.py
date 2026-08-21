@@ -20,7 +20,7 @@ from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
-from reportlab.platypus import (HRFlowable,
+from reportlab.platypus import (HRFlowable, Image as PdfImage, KeepTogether,
                                 Paragraph, SimpleDocTemplate, Spacer, Table,
                                 TableStyle)
 
@@ -33,6 +33,7 @@ MUTED = colors.HexColor("#5a5a5a")
 RULE = colors.HexColor("#c8c8c8")
 ACCENT = colors.HexColor("#8a3324")      # the journal's cover ink, near enough
 PANEL = colors.HexColor("#f2f0ec")
+MAX_FIGURE_HEIGHT = 355          # points; keeps a figure with its heading
 
 
 def styles() -> dict:
@@ -54,6 +55,8 @@ def styles() -> dict:
         "h3": ParagraphStyle("H3", parent=body, fontName="Helvetica-Bold",
                              fontSize=10.8, leading=14, spaceBefore=11,
                              spaceAfter=4, textColor=INK),
+        "caption": ParagraphStyle("Caption", parent=body, fontSize=8.4,
+                                  leading=11, textColor=MUTED, spaceAfter=0),
         "bullet": ParagraphStyle("Bullet", parent=body, leftIndent=16,
                                  bulletIndent=4, spaceAfter=3),
         "quote": ParagraphStyle("Quote", parent=body, leftIndent=10,
@@ -72,6 +75,7 @@ def styles() -> dict:
 UNSUPPORTED = {"⟨": "[", "⟩": "]", "→": "->", "≤": "<=",
                "≥": ">=", "×": "x"}
 
+IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)$")
 LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 BOLD = re.compile(r"\*\*(.+?)\*\*")
 ITALIC = re.compile(r"(?<!\*)\*([^*]+)\*(?!\*)")
@@ -144,6 +148,41 @@ def quote_panel(lines: list[str], st: dict, width: float) -> Table:
     return panel
 
 
+def _next_content(lines: list[str], start: int) -> str | None:
+    for line in lines[start:]:
+        if line.strip():
+            return line.strip()
+    return None
+
+
+def _figure(source: str, caption: str, st: dict, width: float,
+            bare: bool = False) -> list:
+    """A screenshot, sized to the text column and kept with its caption."""
+    from PIL import Image as PilImage
+
+    path = (ROOT / "docs" / source).resolve()
+    if not path.exists():
+        return [Paragraph(f"[missing image: {source}]", st["body"])]
+
+    with PilImage.open(path) as probe:
+        pixel_width, pixel_height = probe.size
+    draw_width = min(width, pixel_width * 0.62)      # screenshots are 96 DPI-ish
+    draw_height = draw_width * pixel_height / pixel_width
+    # Cap the height so a tall screenshot still follows its heading on the same
+    # page, instead of pushing the whole group over and leaving half a page white.
+    if draw_height > MAX_FIGURE_HEIGHT:
+        draw_width *= MAX_FIGURE_HEIGHT / draw_height
+        draw_height = MAX_FIGURE_HEIGHT
+
+    parts = [Spacer(1, 4), PdfImage(str(path), draw_width, draw_height,
+                                    hAlign="LEFT")]
+    if caption:
+        parts.append(Spacer(1, 3))
+        parts.append(Paragraph(caption, st["caption"]))
+    parts.append(Spacer(1, 9))
+    return parts if bare else [KeepTogether(parts)]
+
+
 def convert(markdown: str, st: dict, width: float) -> list:
     story: list = []
     lines = markdown.splitlines()
@@ -164,20 +203,35 @@ def convert(markdown: str, st: dict, width: float) -> list:
             i += 1
             continue
 
-        if stripped.startswith("## "):
-            story.append(Paragraph(inline(stripped[3:]), st["h2"]))
-            i += 1
-            continue
-
-        if stripped.startswith("### "):
-            story.append(Paragraph(inline(stripped[4:]), st["h3"]))
-            i += 1
+        for marker, style in (("## ", "h2"), ("### ", "h3")):
+            if stripped.startswith(marker):
+                heading = Paragraph(inline(stripped[len(marker):]), st[style])
+                following = _next_content(lines, i + 1)
+                image = IMAGE.match(following) if following else None
+                if image:
+                    story.append(KeepTogether(
+                        [heading] + _figure(image.group(2), image.group(1),
+                                            st, width, bare=True)))
+                    i = lines.index(following, i + 1) + 1
+                else:
+                    story.append(heading)
+                    i += 1
+                break
+        else:
+            pass
+        if stripped.startswith("## ") or stripped.startswith("### "):
             continue
 
         if set(stripped) <= {"-"} and len(stripped) >= 3:
             story.append(Spacer(1, 5))
             story.append(HRFlowable(width="100%", thickness=0.7, color=RULE,
                                     spaceBefore=0, spaceAfter=9))
+            i += 1
+            continue
+
+        image = IMAGE.match(stripped)
+        if image:
+            story.extend(_figure(image.group(2), image.group(1), st, width))
             i += 1
             continue
 

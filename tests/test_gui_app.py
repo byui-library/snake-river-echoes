@@ -176,3 +176,29 @@ def test_the_detected_page_mapping_is_shown_to_the_operator():
         assert app.label_printed_var.get() == "27"
     finally:
         root.destroy()
+
+
+def test_the_status_line_distinguishes_the_two_kinds_of_review():
+    """'7 need a sheet number' is wrong when most of them have a correct sheet
+    and want a keep-or-remove decision instead."""
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Bookmark, Issue
+    from srebook.gui.app import App
+    try:
+        app = App(root)
+        app.sheets = [None] * 24
+        app._on_drafted(Issue(bookmarks=[
+            Bookmark("Front Cover", 1),
+            Bookmark("Idaho Poetry", 1, needs_review=True, review_reason="unplaced"),
+            Bookmark("Board of Directors", 24, needs_review=True,
+                     review_reason="suggested"),
+            Bookmark("Western History Books", 23, needs_review=True,
+                     review_reason="suggested"),
+        ]), True)
+
+        status = app.status["text"]
+        assert "1 need" in status or "1 needs" in status, status
+        assert "2" in status, status
+        assert "keep or remove" in status.lower(), status
+    finally:
+        root.destroy()

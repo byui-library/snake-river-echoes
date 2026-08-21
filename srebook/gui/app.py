@@ -284,7 +284,13 @@ class App(ttk.Frame):
         self.build_button.config(state="normal")
 
         self.reanalyse_button.config(state="normal")
-        parked = sum(1 for r in self.grid_model.rows if r.needs_review)
+        # Two different jobs. Saying "n need a sheet number" about a heading we
+        # read off its own page is simply wrong, and sends the operator looking
+        # for a number instead of making a decision.
+        unplaced = sum(1 for r in self.grid_model.rows
+                       if r.needs_review and r.review_reason != "suggested")
+        suggested = sum(1 for r in self.grid_model.rows
+                        if r.needs_review and r.review_reason == "suggested")
         count = len(self.grid_model.rows)
         if fresh:
             lead = f"{count} bookmarks proposed."
@@ -292,8 +298,12 @@ class App(ttk.Frame):
             # Say so, or an old one-bookmark result looks like a failed analysis.
             lead = (f"Loaded your saved review ({count} bookmarks). "
                     "Use Re-analyse to read the scans again.")
-        self.status.config(
-            text=lead + (f" {parked} need a sheet number." if parked else ""))
+        notes = []
+        if unplaced:
+            notes.append(f"{unplaced} need a page number")
+        if suggested:
+            notes.append(f"{suggested} to keep or remove")
+        self.status.config(text=lead + (" " + ", ".join(notes) + "." if notes else ""))
 
     def _on_built(self, out: Path) -> None:
         self.busy = False
@@ -345,8 +355,8 @@ class App(ttk.Frame):
         self._autosave()
         remaining = sum(1 for r in self.grid_model.rows if r.needs_review)
         self.status.config(
-            text=f"{remaining} bookmark(s) still need checking." if remaining
-            else "All bookmarks confirmed. Ready to build.")
+            text=f"{remaining} bookmark(s) still to check."
+            if remaining else "All bookmarks confirmed. Ready to build.")
 
     def add_row(self) -> None:
         if not self.grid_model:
