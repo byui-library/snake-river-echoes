@@ -18,9 +18,12 @@ from PIL import Image, ImageTk
 
 from ..core import ingest, pipeline
 from ..core.model import Issue
+from . import preview
 from .grid import OutlineGrid
 
-PREVIEW_WIDTH = 300
+PREVIEW_MARGIN = 8        # breathing room inside the sunken border
+MIN_PREVIEW = 40          # below this the pane is not laid out yet
+RESIZE_SETTLE_MS = 120    # re-render after dragging stops, not during
 QUALITY_CHOICES = {"Small (150 DPI)": 150, "Balanced (200 DPI)": 200,
                    "High (300 DPI)": 300}
 
@@ -31,7 +34,7 @@ class App(ttk.Frame):
         self.folder: Path | None = None
         self.sheets: list[Path] = []
         self.grid_model: OutlineGrid | None = None
-        self.preview_cache: dict[int, ImageTk.PhotoImage] = {}
+        self.preview_cache: dict[tuple[int, tuple[int, int]], ImageTk.PhotoImage] = {}
         self.events: queue.Queue = queue.Queue()
         self.busy = False
 
@@ -107,29 +110,50 @@ class App(ttk.Frame):
         middle.columnconfigure(0, weight=1)
         middle.rowconfigure(0, weight=1)
 
-        self.tree = ttk.Treeview(middle, columns=("sheet",), show="tree headings",
+        # A draggable split: the operator decides how much room the list and
+        # the page image each get. A fixed-width preview was too small to read,
+        # which defeats its purpose -- it is there to confirm that an article
+        # really starts on the sheet a bookmark claims.
+        self.split = ttk.PanedWindow(middle, orient="horizontal")
+        self.split.grid(row=0, column=0, columnspan=3, sticky="nsew")
+
+        list_pane = ttk.Frame(self.split)
+        list_pane.columnconfigure(0, weight=1)
+        list_pane.rowconfigure(0, weight=1)
+        self.split.add(list_pane, weight=1)
+
+        self.tree = ttk.Treeview(list_pane, columns=("sheet",), show="tree headings",
                                  selectmode="browse")
         self.tree.heading("#0", text="Title")
         self.tree.heading("sheet", text="Sheet")
-        self.tree.column("#0", width=380)
-        self.tree.column("sheet", width=60, anchor="center")
+        self.tree.column("#0", width=340, minwidth=120)
+        self.tree.column("sheet", width=60, minwidth=50, anchor="center")
         self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree.tag_configure("attention", foreground="#a33")
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
         self.tree.bind("<Double-1>", self._on_edit_cell)
 
-        scroll = ttk.Scrollbar(middle, orient="vertical", command=self.tree.yview)
+        scroll = ttk.Scrollbar(list_pane, orient="vertical", command=self.tree.yview)
         scroll.grid(row=0, column=1, sticky="ns")
         self.tree.configure(yscrollcommand=scroll.set)
 
-        self.preview = ttk.Label(middle, relief="sunken", anchor="center",
+        preview_pane = ttk.Frame(self.split)
+        preview_pane.columnconfigure(0, weight=1)
+        preview_pane.rowconfigure(0, weight=1)
+        self.split.add(preview_pane, weight=2)
+
+        self.preview = ttk.Label(preview_pane, relief="sunken", anchor="center",
                                  text="Select a bookmark\nto see its sheet",
-                                 foreground="#777", width=34)
-        self.preview.grid(row=0, column=2, sticky="nsew", padx=(8, 0))
+                                 foreground="#777")
+        self.preview.grid(row=0, column=0, sticky="nsew")
+        # Re-render when the pane changes size, so dragging the split or
+        # maximising the window actually enlarges the page.
+        self.preview.bind("<Configure>", self._on_preview_resized)
 
         buttons = ttk.Frame(middle)
         buttons.grid(row=1, column=0, columnspan=3, sticky="w", pady=(8, 0))
-        for text, command in (("Add", self.add_row), ("Remove", self.remove_row),
+        for text, command in (("Confirm", self.confirm_row),
+                              ("Add", self.add_row), ("Remove", self.remove_row),
                               ("↑", self.move_up), ("↓", self.move_down),
                               ("→ Indent", self.indent), ("← Outdent", self.outdent)):
             ttk.Button(buttons, text=text, command=command, width=9).pack(
@@ -296,6 +320,19 @@ class App(ttk.Frame):
         selection = self.tree.selection()
         return int(selection[0]) if selection else None
 
+    def confirm_row(self) -> None:
+        """Accept the selected bookmark's sheet as correct."""
+        index = self._selected()
+        if index is None or not self.grid_model:
+            return
+        self.grid_model.confirm(index)
+        self._refresh_tree(index)
+        self._autosave()
+        remaining = sum(1 for r in self.grid_model.rows if r.needs_review)
+        self.status.config(
+            text=f"{remaining} bookmark(s) still need checking." if remaining
+            else "All bookmarks confirmed. Ready to build.")
+
     def add_row(self) -> None:
         if not self.grid_model:
             return
@@ -362,13 +399,35 @@ class App(ttk.Frame):
         if not 1 <= sheet <= len(self.sheets):
             self.preview.config(image="", text=f"Sheet {sheet} does not exist")
             return
-        if sheet not in self.preview_cache:
-            image = Image.open(self.sheets[sheet - 1]).convert("L")
-            ratio = PREVIEW_WIDTH / image.width
-            image = image.resize((PREVIEW_WIDTH, round(image.height * ratio)),
-                                 Image.LANCZOS)
-            self.preview_cache[sheet] = ImageTk.PhotoImage(image)
-        self.preview.config(image=self.preview_cache[sheet], text="")
+        self._show_sheet(sheet)
+
+    def _show_sheet(self, sheet: int) -> None:
+        box = (self.preview.winfo_width() - PREVIEW_MARGIN,
+               self.preview.winfo_height() - PREVIEW_MARGIN)
+        if box[0] < MIN_PREVIEW or box[1] < MIN_PREVIEW:
+            # The pane has not been laid out yet; try again once it has.
+            self.after(60, lambda: self._show_sheet(sheet))
+            return
+
+        source = Image.open(self.sheets[sheet - 1])
+        size = preview.fit_within(source.size, box)
+        key = (sheet, size)
+        if key not in self.preview_cache:
+            self.preview_cache.clear()   # one page at a time; these are large
+            image = source.convert("L").resize(size, Image.LANCZOS)
+            self.preview_cache[key] = ImageTk.PhotoImage(image)
+        self._shown_sheet = sheet
+        self.preview.config(image=self.preview_cache[key], text="")
+
+    def _on_preview_resized(self, _event) -> None:
+        """Re-render at the new size, once the operator stops dragging."""
+        sheet = getattr(self, "_shown_sheet", None)
+        if sheet is None:
+            return
+        if getattr(self, "_resize_job", None):
+            self.after_cancel(self._resize_job)
+        self._resize_job = self.after(RESIZE_SETTLE_MS,
+                                      lambda: self._show_sheet(sheet))
 
     # ------------------------------------------------------ build/save ----
 

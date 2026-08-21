@@ -187,3 +187,13 @@ def test_a_reviewed_issue_still_builds():
     issue = an_issue(bookmarks=[Bookmark("Front Cover", 1), Bookmark("Poetry", 19)])
 
     assert validate(issue, sheet_count=22) == []
+
+
+def test_the_review_message_offers_confirming_as_well_as_changing():
+    """Sheet 1 is right for a Front Cover. The operator must be told they can
+    confirm it, not only that they can change or delete it."""
+    issue = an_issue(bookmarks=[Bookmark("COVER", 1, needs_review=True)])
+
+    message = " ".join(validate(issue, sheet_count=22))
+
+    assert "confirm" in message.lower()

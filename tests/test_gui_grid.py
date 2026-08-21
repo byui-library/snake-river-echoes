@@ -251,3 +251,33 @@ def test_saving_writes_the_edited_outline(tmp_path):
 
     saved = load_sidecar(path)
     assert saved.bookmarks[0].children[0].title == "Poem"
+
+
+def test_a_flagged_row_can_be_confirmed_without_changing_it():
+    """The drafter parks an unlocated title on sheet 1. For a Front Cover that
+    is the right answer, so the operator needs a way to say 'yes, that is
+    correct' -- not only a way to change it."""
+    g = a_grid([Bookmark("COVER", 1, needs_review=True)])
+
+    g.confirm(0)
+
+    assert not g.needs_attention(0)
+    assert g.rows[0].sheet == 1
+    assert g.dirty
+
+
+def test_confirming_a_parent_confirms_its_children():
+    g = a_grid([Bookmark("Poetry", 19, needs_review=True, children=[
+        Bookmark("Poem", 21, needs_review=True)])])
+
+    g.confirm(0)
+
+    assert not any(r.needs_review for r in g.rows)
+
+
+def test_confirming_an_already_reviewed_row_is_harmless():
+    g = a_grid([Bookmark("Cover", 1)])
+
+    g.confirm(0)
+
+    assert not g.needs_attention(0)

@@ -92,6 +92,18 @@ class OutlineGrid:
         self.rows[index].needs_review = False
         self.dirty = True
 
+    def confirm(self, index: int) -> None:
+        """Accept a parked row as it stands.
+
+        The drafter parks a title it could not locate on sheet 1. For a Front
+        Cover that is the right answer, so the operator needs a way to agree
+        with it, not only a way to change it.
+        """
+        span = 1 + self._children_of(index)
+        for row in self.rows[index:index + span]:
+            row.needs_review = False
+        self.dirty = True
+
     # --------------------------------------------------------- nesting ----
 
     def can_indent(self, index: int) -> bool:

@@ -161,9 +161,9 @@ def validate(issue: Issue, sheet_count: int) -> list[str]:
                 )
             if b.needs_review:
                 problems.append(
-                    f'Bookmark "{b.title}" was not found in the body, so it is '
-                    f"parked on sheet {b.sheet}. Set the sheet it really starts "
-                    "on, or remove it."
+                    f'Bookmark "{b.title}" was not found in the body, so sheet '
+                    f"{b.sheet} is only a guess. Confirm it if it is right, set "
+                    "the sheet it really starts on, or remove the bookmark."
                 )
             if b.children and depth >= MAX_DEPTH:
                 problems.append(
