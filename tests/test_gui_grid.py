@@ -299,3 +299,61 @@ def test_confirming_reveals_the_sheet_number():
     g.confirm(0)
 
     assert g.sheet_display(0) == "1"
+
+
+# ------------------------------------- entering printed pages, not sheets ----
+
+def a_paginated_grid(bookmarks=None):
+    """Vol 2 No 2: 24 sheets carrying printed pages 25-48."""
+    issue = Issue(title="SRE", body_starts_at_sheet=1, body_starts_at_printed=25,
+                  bookmarks=bookmarks or [])
+    return grid.OutlineGrid(issue, sheet_count=24)
+
+
+def test_the_grid_shows_the_printed_page_beside_the_sheet():
+    g = a_paginated_grid([Bookmark("Front Cover", 1), Bookmark("Board", 24)])
+
+    assert g.printed_display(0) == "25"
+    assert g.printed_display(1) == "48"
+
+
+def test_a_printed_page_can_be_entered_instead_of_a_sheet():
+    """She reads 27 off the contents page; the program works out the sheet.
+    Requiring her to compute 27 - 25 + 1 is what caused every bookmark in an
+    issue to point past the end."""
+    g = a_paginated_grid([Bookmark("Battle of Pierre's Hole", 1)])
+
+    g.set_printed(0, 27)
+
+    assert g.rows[0].sheet == 3
+    assert g.printed_display(0) == "27"
+
+
+def test_setting_a_printed_page_counts_as_reviewing_the_row():
+    g = a_paginated_grid([Bookmark("Poetry", 1, needs_review=True)])
+
+    g.set_printed(0, 30)
+
+    assert not g.needs_attention(0)
+
+
+def test_a_printed_page_outside_the_issue_is_refused():
+    g = a_paginated_grid([Bookmark("Somewhere", 1)])
+
+    assert not g.set_printed(0, 99)
+    assert g.rows[0].sheet == 1, "the row is left as it was"
+
+
+def test_front_matter_shows_no_printed_page():
+    issue = Issue(title="SRE", body_starts_at_sheet=3, body_starts_at_printed=1,
+                  bookmarks=[Bookmark("Front Cover", 1), Bookmark("Article", 3)])
+    g = grid.OutlineGrid(issue, sheet_count=22)
+
+    assert g.printed_display(0) == "—"
+    assert g.printed_display(1) == "1"
+
+
+def test_an_unplaced_bookmark_shows_no_printed_page_either():
+    g = a_paginated_grid([Bookmark("Poetry", 1, needs_review=True)])
+
+    assert g.printed_display(0) == "—"

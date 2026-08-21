@@ -129,12 +129,17 @@ class App(ttk.Frame):
         list_pane.rowconfigure(0, weight=1)
         self.split.add(list_pane, weight=1)
 
-        self.tree = ttk.Treeview(list_pane, columns=("sheet",), show="tree headings",
-                                 selectmode="browse")
+        # Printed page first: it is the number the contents page gives, and
+        # asking an operator to convert it to a sheet by hand once put an entire
+        # issue's bookmarks past the end of the book.
+        self.tree = ttk.Treeview(list_pane, columns=("printed", "sheet"),
+                                 show="tree headings", selectmode="browse")
         self.tree.heading("#0", text="Title")
+        self.tree.heading("printed", text="Printed page")
         self.tree.heading("sheet", text="Sheet")
-        self.tree.column("#0", width=340, minwidth=120)
-        self.tree.column("sheet", width=60, minwidth=50, anchor="center")
+        self.tree.column("#0", width=300, minwidth=120)
+        self.tree.column("printed", width=88, minwidth=70, anchor="center")
+        self.tree.column("sheet", width=58, minwidth=50, anchor="center")
         self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree.tag_configure("attention", foreground="#a33")
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
@@ -314,7 +319,8 @@ class App(ttk.Frame):
             parent = parents.get(0, "") if row.level else ""
             node = self.tree.insert(
                 parent, "end", iid=str(i), text=row.title,
-                values=(self.grid_model.sheet_display(i),),
+                values=(self.grid_model.printed_display(i),
+                        self.grid_model.sheet_display(i)),
                 open=True,
                 tags=("attention",) if self.grid_model.needs_attention(i) else (),
             )
@@ -383,7 +389,20 @@ class App(ttk.Frame):
         column = self.tree.identify_column(event.x)
         row = self.grid_model.rows[index]
         if column == "#1":
-            value = self._ask("Sheet number", f'Which sheet does "{row.title}" start on?',
+            value = self._ask(
+                "Printed page",
+                f'What page number is printed on the page where "{row.title}"\n'
+                "starts? This is the number the contents page gives.",
+                self.grid_model.printed_display(index).replace("—", ""))
+            if value and value.isdigit():
+                if not self.grid_model.set_printed(index, int(value)):
+                    messagebox.showerror(
+                        "SRE Book Builder",
+                        f"This issue does not have a printed page {value}.\n\n"
+                        f"It has {len(self.sheets)} sheets. Check the "
+                        "'Sheet is printed page' setting above the list.")
+        elif column == "#2":
+            value = self._ask("Sheet number", f'Which scan does "{row.title}" start on?',
                               str(row.sheet))
             if value and value.isdigit():
                 self.grid_model.edit(index, sheet=int(value))

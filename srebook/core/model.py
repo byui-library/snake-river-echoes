@@ -138,11 +138,58 @@ def page_labels(issue: Issue, sheet_count: int) -> list[str]:
     return labels
 
 
+def sheet_for_printed(issue: Issue, printed: int) -> int:
+    """Which sheet carries a given printed page number."""
+    return printed - issue.body_starts_at_printed + issue.body_starts_at_sheet
+
+
+def printed_for_sheet(issue: Issue, sheet: int) -> int | None:
+    """The printed page number on a sheet, or None if it is front matter."""
+    if sheet < issue.body_starts_at_sheet:
+        return None
+    return issue.body_starts_at_printed + (sheet - issue.body_starts_at_sheet)
+
+
 # -------------------------------------------------------------- validation ----
+
+def _all_look_like_printed_pages(issue: Issue, sheet_count: int) -> bool:
+    """Do the out-of-range bookmarks look like printed page numbers?
+
+    An operator reads the numbers off the contents page and types them into a
+    column headed Sheet. Every bookmark then points past the end, and saying so
+    once per bookmark buries the one thing worth knowing.
+    """
+    if issue.body_starts_at_printed == issue.body_starts_at_sheet:
+        return False        # the two numberings coincide; nothing to confuse
+
+    def walk(bookmarks):
+        for b in bookmarks:
+            yield b
+            yield from walk(b.children)
+
+    marks = list(walk(issue.bookmarks))
+    beyond = [b for b in marks if b.sheet > sheet_count]
+    if len(beyond) < 2:
+        return False
+    return all(1 <= sheet_for_printed(issue, b.sheet) <= sheet_count for b in beyond)
+
 
 def validate(issue: Issue, sheet_count: int) -> list[str]:
     """Problems that must be fixed before building, in plain English."""
     problems: list[str] = []
+
+    if _all_look_like_printed_pages(issue, sheet_count):
+        first = issue.body_starts_at_sheet
+        return [
+            f"These bookmarks look like printed page numbers rather than sheet "
+            f"numbers. This issue has {sheet_count} sheets, carrying printed "
+            f"pages {issue.body_starts_at_printed} to "
+            f"{issue.body_starts_at_printed + sheet_count - first}. "
+            f"Sheet {first} is printed page {issue.body_starts_at_printed}, so "
+            f"printed page {issue.body_starts_at_printed} means sheet {first}. "
+            "Use the Printed page column to enter them as they appear on the "
+            "contents page."
+        ]
 
     if not 1 <= issue.body_starts_at_sheet <= max(sheet_count, 1):
         problems.append(

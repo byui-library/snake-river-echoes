@@ -2,7 +2,9 @@ import json
 
 import pytest
 
-from srebook.core.model import Bookmark, Issue, load_sidecar, page_labels, save_sidecar, validate
+from srebook.core.model import (Bookmark, Issue, load_sidecar, page_labels,
+                                printed_for_sheet, save_sidecar,
+                                sheet_for_printed, validate)
 
 
 def an_issue(**kw):
@@ -197,3 +199,53 @@ def test_the_review_message_offers_confirming_as_well_as_changing():
     message = " ".join(validate(issue, sheet_count=22))
 
     assert "confirm" in message.lower()
+
+
+# ------------------------------------- sheets and printed pages, both ways ----
+
+def test_the_sheet_for_a_printed_page():
+    """Vol 2 No 2 runs pages 25-48 across 24 sheets."""
+    issue = an_issue(body_starts_at_sheet=1, body_starts_at_printed=25)
+
+    assert sheet_for_printed(issue, 25) == 1
+    assert sheet_for_printed(issue, 48) == 24
+
+
+def test_the_printed_page_for_a_sheet():
+    issue = an_issue(body_starts_at_sheet=1, body_starts_at_printed=25)
+
+    assert printed_for_sheet(issue, 1) == 25
+    assert printed_for_sheet(issue, 24) == 48
+
+
+def test_front_matter_has_no_printed_page():
+    issue = an_issue(body_starts_at_sheet=3, body_starts_at_printed=1)
+
+    assert printed_for_sheet(issue, 1) is None
+    assert printed_for_sheet(issue, 3) == 1
+
+
+def test_printed_page_numbers_typed_into_the_sheet_column_are_recognised():
+    """What actually happened: an operator read the numbers off the contents
+    page and typed them into a column headed Sheet. Seventeen bookmarks then
+    pointed past the end, and the program said so seventeen times."""
+    issue = an_issue(body_starts_at_sheet=1, body_starts_at_printed=25,
+                     bookmarks=[Bookmark("Front Cover", 25),
+                                Bookmark("Table of Contents", 26),
+                                Bookmark("Board of Directors", 48)])
+
+    problems = validate(issue, sheet_count=24)
+
+    assert len(problems) == 1, "one explanation, not one per bookmark"
+    joined = problems[0].lower()
+    assert "printed page" in joined
+    assert "sheet" in joined
+
+
+def test_a_single_bookmark_past_the_end_is_still_reported_plainly():
+    """Not every out-of-range bookmark is the printed-page mistake."""
+    issue = an_issue(bookmarks=[Bookmark("Nowhere", 99)])
+
+    problems = validate(issue, sheet_count=22)
+
+    assert any("Nowhere" in p and "99" in p for p in problems)

@@ -63,22 +63,30 @@ You have three choices. Select the bookmark, then:
 
 | If | Do this |
 |---|---|
-| The sheet shown is right | Click **Confirm** |
-| It should point somewhere else | Double-click the **Sheet** number and type the right one |
+| The page shown is right | Click **Confirm** |
+| It should point somewhere else | Double-click **Printed page** and type the number from the contents page |
 | It should not be a bookmark at all | Click **Remove** |
+
+If every bookmark suddenly points past the end of the issue, you have almost
+certainly typed printed page numbers into the **Sheet** column. Use the
+**Printed page** column instead — the program will tell you if it spots this.
 
 **The program will not build until every red bookmark is dealt with.** That is
 deliberate: a bookmark that jumps to the wrong page is worse than no bookmark,
 because a reader has no way to tell.
 
-### Finding the right sheet
+### Finding the right page
 
-Use the issue's own contents page. It gives a **printed page number**. Convert
-it using the *Sheet is printed page* setting:
+Use the issue's own contents page. It gives a **printed page number** — the
+number printed on the paper. Type that straight into the **Printed page**
+column and the program works out the sheet for you.
 
 > Contents page says the article is on **page 33**.
-> The setting says **sheet 1 is printed page 27**.
-> So the article is on sheet **33 − 27 + 1 = 7**.
+> Double-click the **Printed page** column, type **33**.
+> The Sheet column fills itself in.
+
+You never need to do that arithmetic yourself. If you type a page the issue
+does not have, it will say so rather than accept it.
 
 Then click the bookmark and check the picture on the right actually shows that
 article starting. That check takes two seconds and is the whole point of the

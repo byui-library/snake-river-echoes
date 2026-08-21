@@ -12,7 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..core.model import Bookmark, Issue, save_sidecar, validate
+from ..core.model import (Bookmark, Issue, printed_for_sheet,
+                          save_sidecar, sheet_for_printed, validate)
 
 MAX_LEVEL = 1  # 0 = article, 1 = a piece within a department
 UNPLACED_SHEET = "—"  # em dash: a guess, not an answer
@@ -186,6 +187,27 @@ class OutlineGrid:
         """
         row = self.rows[index]
         return UNPLACED_SHEET if row.needs_review else str(row.sheet)
+
+    def printed_display(self, index: int) -> str:
+        """The printed page number for a row, for the column beside the sheet."""
+        row = self.rows[index]
+        if row.needs_review:
+            return UNPLACED_SHEET
+        printed = printed_for_sheet(self.issue, row.sheet)
+        return UNPLACED_SHEET if printed is None else str(printed)
+
+    def set_printed(self, index: int, printed: int) -> bool:
+        """Place a row by the number printed on the page.
+
+        The contents page gives printed pages, so an operator naturally reads
+        one off and types it in. Making her convert it to a sheet by hand is
+        what put an entire issue's bookmarks past the end of the book.
+        """
+        sheet = sheet_for_printed(self.issue, printed)
+        if not 1 <= sheet <= self.sheet_count:
+            return False
+        self.edit(index, sheet=sheet)
+        return True
 
     # ---------------------------------------------------------- saving ----
 
