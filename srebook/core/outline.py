@@ -14,6 +14,12 @@ import re
 from collections import Counter
 
 CONTENTS_HEADING = re.compile(r"^\W*CONTENTS\W*$", re.IGNORECASE)
+# Some issues print the marker inside a header line: "Spring Issue, 1972
+# CONTENTS Volume 1, Number 4". Requiring a line of its own missed those, and
+# the cover's masthead became the outline instead.
+CONTENTS_INLINE = re.compile(r"\bCONTENTS\b", re.IGNORECASE)
+# A header line is short. "we catalogued the contents of the collection" is not.
+MAX_CONTENTS_HEADER_WORDS = 9
 LEADER = re.compile(r"[.…]{2,}|[.\s]{4,}")
 MIN_TITLE_LETTERS = 5
 MIN_UPPERCASE_RATIO = 0.85
@@ -30,6 +36,32 @@ PROSE_WORD_LETTERS = 4
 MAX_TITLE_WORDS = 12
 # Fewer words than this is a fragment, not a shortened heading.
 MIN_SHORTENED_HEADING_WORDS = 3
+
+
+def _contents_line(lines: list[str]) -> int | None:
+    """Index of the line announcing the contents list, or None."""
+    for i, line in enumerate(lines):
+        text = line.strip()
+        if CONTENTS_HEADING.match(text):
+            return i
+        if (CONTENTS_INLINE.search(text)
+                and len(text.split()) <= MAX_CONTENTS_HEADER_WORDS
+                and _looks_like_a_header(text)):
+            return i
+    return None
+
+
+def _looks_like_a_header(text: str) -> bool:
+    """A masthead line, not a sentence.
+
+    "Spring Issue, 1972 CONTENTS Volume 1, Number 4" is a header. "we
+    catalogued the contents of the collection" merely uses the word.
+    """
+    for word in text.split():
+        letters = "".join(c for c in word if c.isalpha())
+        if len(letters) >= 3 and not letters[0].isupper():
+            return False
+    return True
 
 
 def _normalize(text: str) -> str:
@@ -56,11 +88,8 @@ def candidate_titles(lines: list[str]) -> list[str]:
     would reduce an author credit like "by Harold S. Forbush" to "H S F", which
     then looks exactly like a title.
     """
-    start = 0
-    for i, line in enumerate(lines):
-        if CONTENTS_HEADING.match(line.strip()):
-            start = i + 1
-            break
+    marker = _contents_line(lines)
+    start = 0 if marker is None else marker + 1
 
     titles: list[str] = []
     pending: str | None = None   # a title whose line ended mid-phrase
@@ -126,11 +155,8 @@ def loose_titles(lines: list[str]) -> list[str]:
     unconfirmed loose title is dropped rather than parked -- most of them are
     "Volume 1, Number 3", not articles.
     """
-    start = 0
-    for i, line in enumerate(lines):
-        if CONTENTS_HEADING.match(line.strip()):
-            start = i + 1
-            break
+    marker = _contents_line(lines)
+    start = 0 if marker is None else marker + 1
 
     titles: list[str] = []
     for raw in lines[start:]:
@@ -180,9 +206,8 @@ def find_contents_sheet(sheets: dict[int, list[str]]) -> int:
     each title against its own entry on the contents page.
     """
     for sheet in sorted(s for s in sheets if s <= FRONT_MATTER_SHEETS):
-        for line in sheets[sheet]:
-            if CONTENTS_HEADING.match(line.strip()):
-                return sheet
+        if _contents_line(sheets[sheet]) is not None:
+            return sheet
     return min(sheets) if sheets else 1
 
 

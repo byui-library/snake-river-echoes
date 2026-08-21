@@ -457,3 +457,43 @@ def test_a_genuinely_shortened_heading_still_matches():
                                     {8: ["8", "A BRIEF AUTOBIOGRAPHY"]})
 
     assert located == [("A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY", 8)]
+
+
+# ------------------- Vol 1 No 4: the contents marker is buried in a header line ----
+
+def test_a_contents_marker_inside_a_header_line_is_found():
+    """Vol 1 No 4 prints 'Spring Issue, 1972 CONTENTS Volume 1, Number 4' as a
+    single line. Requiring the line to be exactly CONTENTS missed it, the
+    contents page was never found, and the cover's masthead became the outline."""
+    sheets = {
+        1: ["UPPER SNAKE RIVER VALLEY", "HISTORICAL SOCIETY", "QUARTERLY"],
+        2: ["THE UPPER SNAKE RIVER VALLEY HISTORICAL SOCIETY QUARTERLY",
+            "Spring Issue, 1972 CONTENTS Volume 1, Number 4",
+            "Editorial"],
+    }
+
+    assert outline.find_contents_sheet(sheets) == 2
+
+
+def test_the_masthead_above_an_inline_contents_marker_is_skipped():
+    lines = [
+        "UPPER SNAKE RIVER VALLEY",
+        "HISTORICAL SOCIETY",
+        "QUARTERLY",
+        "VOLUME 1 NUMBER 4 SPRING 1972 . $1.25",
+        "Spring Issue, 1972 CONTENTS Volume 1, Number 4",
+        "SOMETHING REAL",
+    ]
+
+    titles = outline.candidate_titles(lines)
+
+    assert titles == ["SOMETHING REAL"]
+
+
+def test_the_word_contents_in_running_prose_is_not_a_marker():
+    """A body page discussing 'the contents of the collection' must not be
+    mistaken for the contents page."""
+    sheets = {1: ["COVER"],
+              2: ["we catalogued the contents of the collection in detail"]}
+
+    assert outline.find_contents_sheet(sheets) == 1
