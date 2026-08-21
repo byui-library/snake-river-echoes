@@ -305,6 +305,18 @@ class App(ttk.Frame):
             notes.append(f"{suggested} to keep or remove")
         self.status.config(text=lead + (" " + ", ".join(notes) + "." if notes else ""))
 
+        # A scan missing pages is worth interrupting for: otherwise the operator
+        # hunts for articles that were never scanned, and may publish an issue
+        # believing it complete.
+        if fresh and issue.missing_pages:
+            pages = ", ".join(str(p) for p in issue.missing_pages)
+            messagebox.showwarning(
+                "SRE Book Builder",
+                f"The contents page refers to printed page(s) {pages}, which no "
+                "scan in this folder carries.\n\n"
+                "Pages were probably missed at the scanner. Check the issue "
+                "against the paper copy before publishing.")
+
     def _on_built(self, out: Path) -> None:
         self.busy = False
         self.build_button.config(state="normal")

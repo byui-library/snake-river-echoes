@@ -60,6 +60,9 @@ class Issue:
     body_starts_at_sheet: int = 1
     body_starts_at_printed: int = 1
     bookmarks: list[Bookmark] = field(default_factory=list)
+    # Pages the contents page cites that no sheet carries -- almost always
+    # pages missed at the scanner. Recorded so a rebuild still reports them.
+    missing_pages: list[int] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -74,6 +77,7 @@ class Issue:
                 "body_starts_at_printed": self.body_starts_at_printed,
             },
             "bookmarks": [b.to_dict() for b in self.bookmarks],
+            **({"missing_pages": self.missing_pages} if self.missing_pages else {}),
         }
 
     @classmethod
@@ -89,6 +93,7 @@ class Issue:
             body_starts_at_sheet=labels.get("body_starts_at_sheet", 1),
             body_starts_at_printed=labels.get("body_starts_at_printed", 1),
             bookmarks=[Bookmark.from_dict(b) for b in d.get("bookmarks", [])],
+            missing_pages=d.get("missing_pages", []),
         )
 
     def display_title(self) -> str:

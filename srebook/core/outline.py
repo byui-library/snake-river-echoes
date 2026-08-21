@@ -427,6 +427,74 @@ def _could_be_a_heading(text: str) -> bool:
     return True
 
 
+MASTHEAD = re.compile(r"\b(volume|vol|number|no)\b\.?\s*\d+\s*$", re.IGNORECASE)
+CITED_PAGE = re.compile(r"(\d{1,4})(?:\s*[-–]\s*(\d{1,4}))?\s*$")
+
+
+def cited_pages(lines: list[str]) -> list[int]:
+    """The page numbers the contents page quotes, in the order it quotes them.
+
+    Only a number ending the line counts: that is where a contents entry puts
+    it, after the leader. A four-digit year is a date, not a page.
+    """
+    marker = _contents_line(lines)
+    start = 0 if marker is None else marker + 1
+
+    pages: list[int] = []
+    for raw in lines[start:]:
+        text = raw.strip()
+        if MASTHEAD.search(text):
+            continue          # "Fall Issue, 1971 Volume 1, Number 2"
+        m = CITED_PAGE.search(text)
+        if not m:
+            continue
+        for group in m.groups():
+            if group is None:
+                continue
+            page = int(group)
+            if len(group) == 4 and 1500 <= page <= 2100:
+                continue                      # a year
+            if 1 <= page <= 2000:
+                pages.append(page)
+    return pages
+
+
+def printed_folios(sheets: dict[int, list[str]]) -> dict[int, int]:
+    """The page number printed on each sheet that shows one."""
+    folios: dict[int, int] = {}
+    for sheet, lines in sheets.items():
+        for line in lines[:2]:
+            text = line.strip()
+            if text.isdigit() and 1 <= int(text) <= 2000:
+                folios[sheet] = int(text)
+                break
+    return folios
+
+
+def missing_pages(cited: list[int], folios: dict[int, int],
+                  sheet_count: int, first_body_sheet: int) -> list[int]:
+    """Pages the contents page cites that no body sheet in this scan carries.
+
+    Vol 1 No 2 cites pages 27 and 28, yet every folio printed in it follows
+    printed = sheet + 26, which puts those two on the cover and the contents
+    page. They are not there: two pages were missed at the scanner, and two
+    articles went with them. Silence about that leaves an archivist hunting for
+    articles that were never scanned.
+    """
+    if not folios:
+        return []
+    # Real folios include OCR slips -- 40 read as 49, 45 as 47. Demanding that
+    # every folio agree made the check give up exactly where it was needed, so
+    # take the offset most of them support.
+    tally = Counter(sheet - printed for sheet, printed in folios.items())
+    offset, agreeing = tally.most_common(1)[0]
+    if agreeing < 2 or agreeing <= len(folios) / 2:
+        return []                    # no offset commands a majority
+
+    return sorted({p for p in cited
+                   if not first_body_sheet <= p + offset <= sheet_count})
+
+
 def detect_body_start(sheets: dict[int, list[str]]) -> tuple[int, int] | None:
     """Infer (sheet, printed page number) from numbers printed on body sheets.
 

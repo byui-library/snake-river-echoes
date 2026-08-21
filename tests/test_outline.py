@@ -635,3 +635,63 @@ def test_ocr_debris_is_stripped_from_a_suggested_heading():
     body = {23: ["WESTERN HISTORY BOOKS \u00e9", "The following list of books"]}
 
     assert outline.unclaimed_headings(body, claimed=[]) == [("Western History Books", 23)]
+
+
+# -------------------------------- page numbers the contents page cites ----
+
+def test_page_numbers_are_read_off_the_contents_page():
+    lines = ["CONTENTS",
+             "Historical Society 27",
+             "Valley, : __ 28",
+             "ANNUAL FALL PUBLIC MEETING ANNOUNCEMENT 30",
+             "told 31",
+             "BOOK LIST 46"]
+
+    assert outline.cited_pages(lines) == [27, 28, 30, 31, 46]
+
+
+def test_a_year_in_the_contents_is_not_a_page_number():
+    assert outline.cited_pages(["CONTENTS", "Fall Issue, 1971 Volume 1, Number 2"]) == []
+
+
+def test_a_page_range_cites_both_ends():
+    assert outline.cited_pages(["CONTENTS", "PICTURES OF SUMMER FIELD TRIP 36-37"]) \
+        == [36, 37]
+
+
+def test_pages_the_scan_does_not_contain_are_reported():
+    """Vol 1 No 2's contents cites pages 27 and 28, but every folio printed in
+    the issue follows printed = sheet + 26, so 28 and 29 are in no scan at all.
+    Two pages were missed at the scanner, and two articles went with them."""
+    missing = outline.missing_pages(cited=[27, 28, 30, 31, 46],
+                                    folios={4: 30, 5: 31, 6: 32},
+                                    sheet_count=20, first_body_sheet=3)
+
+    assert missing == [27, 28]
+
+
+def test_nothing_is_reported_when_the_scan_is_complete():
+    missing = outline.missing_pages(cited=[3, 4, 7], folios={4: 4, 6: 6},
+                                    sheet_count=22, first_body_sheet=3)
+
+    assert missing == []
+
+
+def test_a_misread_folio_does_not_silence_the_missing_page_check():
+    """Real folios include OCR slips -- 40 read as 49, 45 as 47. Demanding that
+    every folio agree meant the check gave up exactly where it was needed."""
+    folios = {4: 30, 5: 31, 6: 32, 7: 33, 14: 49, 19: 47}   # two misreads
+
+    missing = outline.missing_pages(cited=[27, 28, 30, 31], folios=folios,
+                                    sheet_count=20, first_body_sheet=3)
+
+    assert missing == [27, 28]
+
+
+def test_folios_too_scattered_to_agree_report_nothing():
+    """If no offset commands a majority, the scan is not understood well enough
+    to accuse it of missing pages."""
+    missing = outline.missing_pages(cited=[27, 28], folios={4: 30, 6: 40},
+                                    sheet_count=20, first_body_sheet=3)
+
+    assert missing == []

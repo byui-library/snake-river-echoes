@@ -203,6 +203,14 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
 
     issue.bookmarks.sort(key=lambda b: b.sheet)
 
+    # Pages the contents page cites that no sheet carries. Vol 1 No 2 lists
+    # articles on pages 28 and 29 which were never scanned, and without this
+    # the only sign was two bookmarks the parser could not place.
+    folios = outline.printed_folios(body)
+    issue.missing_pages = outline.missing_pages(
+        cited=outline.cited_pages(front_matter), folios=folios,
+        sheet_count=len(sheets), first_body_sheet=contents_sheet + 1)
+
     output_dir(folder).mkdir(parents=True, exist_ok=True)
     save_sidecar(issue, existing)
     return issue

@@ -52,6 +52,12 @@ def _describe_draft(issue: Issue, folder: Path) -> None:
         for title, sheet in suggested:
             print(f"      sheet {sheet:>3}  {title}")
 
+    if issue.missing_pages:
+        pages = ", ".join(str(p) for p in issue.missing_pages)
+        print(f"\n  The contents page refers to printed page(s) {pages},")
+        print("  which no scan in this folder carries. Pages were probably")
+        print("  missed at the scanner. Check the issue before publishing.")
+
     print(f"\nReview {pipeline.sidecar_path(folder)}")
     print(f'then run:  srebook build "{folder}"')
 
