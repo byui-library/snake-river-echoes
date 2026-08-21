@@ -148,6 +148,18 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
         issue.body_starts_at_sheet, issue.body_starts_at_printed = detected
 
     titles = outline.candidate_titles(front_matter)
+    placed = {t for t, sheet in outline.locate_titles(titles, body) if sheet}
+
+    # Some issues set their contents in Title Case rather than caps, and then
+    # capitalisation cannot separate a title from the description beneath it.
+    # Those candidates are only trustworthy once the body confirms them, so an
+    # unconfirmed one is dropped rather than parked -- most are front-matter
+    # noise like "Volume 1, Number 3".
+    for title, sheet in outline.locate_loose_titles(
+            outline.loose_titles(front_matter), body):
+        if title not in placed and title not in titles:
+            titles.append(title)
+
     for title, sheet in outline.locate_titles(titles, body):
         # An unlocated title is parked on sheet 1 rather than dropped -- the
         # operator needs to see it in the grid to place it -- and flagged, so

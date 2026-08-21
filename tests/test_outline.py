@@ -316,3 +316,144 @@ def test_the_first_issue_still_yields_exactly_its_articles():
         "ANDREW HENRY",
         "IDAHO POETRY",
     ]
+
+
+# --------------------------- real OCR from Vol 1 No 3: a Title Case contents ----
+
+REAL_TOC_3 = [
+    "THE UPPER SNAKE RIVER VALLEY",
+    "HISTORICAL SOCIETY QUARTERLY",
+    "Winter Issue, 1971-1972",
+    "Contents",
+    "A Critical Look at Historical Editing",
+    "The editor discusses the problems of writing history when",
+    "Volume 1, Number 3",
+    "The Massacre on Birch Creek",
+    "War as it occured in Clark County",
+    "Idaho Merchants Tokens",
+    "Illustrations",
+    "Community History",
+    "its history told",
+    "Annual Fall Public Meeting \u2018",
+    "a knowledge of the area being written about is not clear 51",
+    "By De Cost Smith. The story of part of the Nez Perce",
+    "by Kendall Lee Ballard. An explanation of tokens and how",
+]
+
+REAL_BODY_3 = {
+    3: ["A CRITICAL LOOK AT HISTORICAL EDITING", "As you wander through the libraries"],
+    4: ["THE MASSACRE ON BIRCH CREEK", "The Editor"],
+    8: ["IDAHO MERCHANTS TOKENS", "by Kendall Lee Ballard"],
+    12: ["ANNUAL FALL PUBLIC MEETING", "This year the public meetings"],
+}
+
+
+def test_a_title_case_contents_page_yields_nothing_on_its_own():
+    """Vol 1 No 3 sets its contents in Title Case, not caps. The strict rule
+    finds nothing there, which is correct -- it cannot tell a title from a
+    description line by capitalisation alone."""
+    assert outline.candidate_titles(REAL_TOC_3) == []
+
+
+def test_title_case_entries_are_offered_as_loose_candidates():
+    loose = outline.loose_titles(REAL_TOC_3)
+
+    assert "A Critical Look at Historical Editing" in loose
+    assert "The Massacre on Birch Creek" in loose
+    assert "Idaho Merchants Tokens" in loose
+
+
+def test_description_lines_are_not_loose_candidates():
+    """'War as it occured in Clark County' reads like a title but is a
+    description; a lowercase word of real length gives it away."""
+    loose = outline.loose_titles(REAL_TOC_3)
+
+    assert "War as it occured in Clark County" not in loose
+    assert not any(t.startswith("The editor discusses") for t in loose)
+    assert not any(t.startswith("its history") for t in loose)
+    assert not any("knowledge of the area" in t for t in loose)
+
+
+def test_a_title_case_issue_resolves_against_its_body():
+    """Loose candidates are only trustworthy once the body confirms them."""
+    located = dict(outline.locate_titles(outline.loose_titles(REAL_TOC_3), REAL_BODY_3))
+
+    assert located["A Critical Look at Historical Editing"] == 3
+    assert located["The Massacre on Birch Creek"] == 4
+    assert located["Idaho Merchants Tokens"] == 8
+    assert located["Annual Fall Public Meeting"] == 12
+    # Front-matter noise that happens to look like a title finds nothing.
+    assert located.get("Volume 1, Number 3") is None
+
+
+def test_an_all_caps_issue_produces_no_extra_loose_candidates():
+    """Vol 1 No 1 is already handled strictly; loose matching must not add
+    duplicates of what the strict pass already found."""
+    strict = set(outline.candidate_titles(REAL_TOC))
+
+    assert not (set(outline.loose_titles(REAL_TOC)) & strict)
+
+
+def test_a_confirmed_loose_title_takes_its_wording_from_the_body():
+    """Contents lines in small type OCR badly: 'Long Distance Rides and
+    Raids" : ; tae' and 'Library Revi a ='. The printed heading is set larger,
+    reads cleanly, and is the authoritative wording anyway."""
+    toc = ["Contents", 'Long Distance Rides and Raids\u201d : ; tae', "Library Revi a ="]
+    body = {18: ["66", "LONG DISTANCE RIDES AND RAIDS", "BY Lieutenant Colonel"],
+            22: ["70", "LIBRARY HISTORY COLLECTIONS", "The Upper Snake River"]}
+
+    found = outline.locate_loose_titles(outline.loose_titles(toc), body)
+
+    assert ("Long Distance Rides and Raids", 18) in found
+
+
+def test_a_contents_line_too_garbled_to_confirm_is_dropped():
+    """'Library Revi a =' is not a prefix of the printed 'LIBRARY HISTORY
+    COLLECTIONS', so nothing confirms it. Dropping it loses a real article the
+    operator must add by hand -- which is better than publishing a bookmark
+    titled "Library Revi". A known limitation, recorded rather than hidden."""
+    body = {22: ["70", "LIBRARY HISTORY COLLECTIONS", "The Upper Snake River"]}
+
+    found = outline.locate_loose_titles(outline.loose_titles(
+        ["Contents", "Library Revi a ="]), body)
+
+    assert found == []
+
+
+def test_body_wording_is_presented_in_title_case():
+    """A bookmark panel of shouting caps is harder to scan than title case."""
+    body = {3: ["A CRITICAL LOOK AT HISTORICAL EDITING"]}
+
+    found = outline.locate_loose_titles(["A Critical Look at Historical Editing"], body)
+
+    assert found == [("A Critical Look at Historical Editing", 3)]
+
+
+def test_title_case_keeps_numbers_and_marks_intact():
+    body = {16: ["DEDICATION OF MARKER #378"]}
+
+    found = outline.locate_loose_titles(["Dedication of Marker #378 of the Daughters"], body)
+
+    assert found == [("Dedication of Marker #378", 16)]
+
+
+def test_an_unconfirmed_loose_title_is_not_returned():
+    assert outline.locate_loose_titles(["Volume 1, Number 3"], {3: ["prose here"]}) == []
+
+
+def test_a_one_word_fragment_does_not_claim_a_longer_title():
+    """A stray 'LIBRARY' on the page is not the heading for 'Library Revi'.
+    The shorter-heading rule exists for real abbreviations like 'A BRIEF
+    AUTOBIOGRAPHY', not for single words."""
+    body = {22: ["LIBRARY", "LIBRARY HISTORY COLLECTIONS"]}
+
+    assert outline.locate_loose_titles(["Library Revi"], body) == []
+
+
+def test_a_genuinely_shortened_heading_still_matches():
+    """Vol 1 No 1: contents says 'A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE
+    HISTORY', the article is headed 'A BRIEF AUTOBIOGRAPHY'."""
+    located = outline.locate_titles(["A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY"],
+                                    {8: ["8", "A BRIEF AUTOBIOGRAPHY"]})
+
+    assert located == [("A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY", 8)]

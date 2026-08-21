@@ -254,3 +254,34 @@ def test_draft_marks_only_the_titles_it_could_not_locate(tmp_path, make_sheet):
     flags = {b.title: b.needs_review for b in issue.bookmarks}
     assert flags["ORAL HISTORY"] is False
     assert flags["IDAHO POETRY"] is True
+
+
+def test_a_title_case_contents_page_still_produces_bookmarks(tmp_path, make_sheet):
+    """Vol 1 No 3 sets its contents in Title Case. Only entries the body
+    confirms become bookmarks; front-matter noise that merely looks like a
+    title is dropped rather than parked."""
+    folder = tmp_path / "issue"
+    folder.mkdir()
+    for n in range(1, 5):
+        src = make_sheet(name=f"W_{n:02d}.tif")
+        src.replace(folder / src.name)
+    cache = pipeline.cache_dir(folder)
+    cache.mkdir(parents=True)
+    (cache / "W_01.hocr").write_bytes(hocr_page([("COVER", (200, 300, 900, 360))]))
+    (cache / "W_02.hocr").write_bytes(hocr_page([
+        ("Contents", (200, 300, 900, 360)),
+        ("A Critical Look at Historical Editing", (200, 400, 1800, 460)),
+        ("Volume 1, Number 3", (200, 500, 1400, 560)),
+        ("The editor discusses the problems of writing", (200, 600, 1900, 660)),
+    ]))
+    (cache / "W_03.hocr").write_bytes(hocr_page([
+        ("A CRITICAL LOOK AT HISTORICAL EDITING", (200, 300, 1900, 360)),
+        ("As you wander through the libraries", (200, 400, 1800, 460))]))
+    (cache / "W_04.hocr").write_bytes(hocr_page([("more prose", (200, 300, 900, 360))]))
+
+    issue = pipeline.draft(folder)
+
+    titles = [(b.title, b.sheet) for b in issue.bookmarks]
+    assert ("A Critical Look at Historical Editing", 3) in titles
+    assert not any("Volume 1" in t for t, _ in titles)
+    assert not any(t.startswith("The editor") for t, _ in titles)

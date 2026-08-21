@@ -22,6 +22,15 @@ MIN_MATCH_LETTERS = 6
 # The contents page is never deep into an issue.
 FRONT_MATTER_SHEETS = 4
 
+# Words a Title Case title may legitimately leave lowercase.
+SMALL_WORDS = {"a", "an", "the", "of", "on", "at", "in", "to", "for", "and",
+               "or", "as", "by", "from", "with", "into", "over", "up"}
+# A lowercase word this long is prose, not a title's connective tissue.
+PROSE_WORD_LETTERS = 4
+MAX_TITLE_WORDS = 12
+# Fewer words than this is a fragment, not a shortened heading.
+MIN_SHORTENED_HEADING_WORDS = 3
+
 
 def _normalize(text: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", text.upper())
@@ -107,6 +116,63 @@ def _title_from_line(raw: str) -> str | None:
     return title
 
 
+def loose_titles(lines: list[str]) -> list[str]:
+    """Title Case contents entries, for issues that do not set theirs in caps.
+
+    Vol 1 No 3 lists "A Critical Look at Historical Editing" where Vol 1 No 1
+    would have shouted it. Capitalisation alone cannot separate those from the
+    description lines beneath them, so these are only *candidates*: the caller
+    keeps the ones the body confirms and discards the rest. That is why an
+    unconfirmed loose title is dropped rather than parked -- most of them are
+    "Volume 1, Number 3", not articles.
+    """
+    start = 0
+    for i, line in enumerate(lines):
+        if CONTENTS_HEADING.match(line.strip()):
+            start = i + 1
+            break
+
+    titles: list[str] = []
+    for raw in lines[start:]:
+        title = _loose_title_from_line(raw)
+        if title and title not in titles:
+            titles.append(title)
+    return titles
+
+
+def _loose_title_from_line(raw: str) -> str | None:
+    head = LEADER.split(raw.strip())[0].strip()
+    words = head.split()
+    while len(words) > 1 and _is_leader_noise(words[-1]):
+        words.pop()
+    title = re.sub(r"\s+", " ", " ".join(words)).strip(" .,-‘’")
+
+    letters = [c for c in title if c.isalpha()]
+    if len(letters) < MIN_TITLE_LETTERS:
+        return None
+    # Already handled by the strict pass; do not offer it twice.
+    if sum(c.isupper() for c in letters) / len(letters) >= MIN_UPPERCASE_RATIO:
+        return None
+
+    words = title.split()
+    if not words or len(words) > MAX_TITLE_WORDS:
+        return None
+    for word in words:
+        clean = "".join(c for c in word if c.isalpha())
+        if not clean:
+            continue
+        if clean[0].isupper():
+            continue
+        if clean.lower() in SMALL_WORDS:
+            continue
+        # A lowercase word of real length means this is a sentence.
+        if len(clean) >= PROSE_WORD_LETTERS:
+            return None
+    if not any(c.isalpha() for c in words[0]):
+        return None
+    return title
+
+
 def find_contents_sheet(sheets: dict[int, list[str]]) -> int:
     """The sheet carrying the printed contents list.
 
@@ -145,7 +211,12 @@ def _matches_heading(want: str, line: str) -> bool:
         extra = len(got) - len(want)
         return extra <= 3 or _looks_like_a_heading(line)
     if len(got) >= MIN_MATCH_LETTERS and want.startswith(got):
-        return _looks_like_a_heading(line)
+        # A shortened heading is a real pattern ("A BRIEF AUTOBIOGRAPHY" for
+        # "A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY"), but a one- or
+        # two-word fragment is not one: a stray "LIBRARY" on the page would
+        # otherwise claim the article titled "Library Revi".
+        words = [w for w in line.split() if any(c.isalnum() for c in w)]
+        return len(words) >= MIN_SHORTENED_HEADING_WORDS and _looks_like_a_heading(line)
     return False
 
 
@@ -174,6 +245,51 @@ def locate_titles(titles: list[str], sheets: dict[int, list[str]]
                 break
         located.append((title, best))
     return located
+
+
+def _title_case(text: str) -> str:
+    """A printed heading is set in caps; a bookmark panel reads better without
+    the shouting. Small words stay lowercase unless they lead."""
+    words = text.split()
+    out = []
+    for i, word in enumerate(words):
+        letters = "".join(c for c in word if c.isalpha())
+        if not letters:
+            out.append(word)
+            continue
+        lower = word.lower()
+        if i and letters.lower() in SMALL_WORDS:
+            out.append(lower)
+        else:
+            out.append(lower[0].upper() + lower[1:])
+    return " ".join(out)
+
+
+def locate_loose_titles(titles: list[str], sheets: dict[int, list[str]]
+                        ) -> list[tuple[str, int]]:
+    """Confirm Title Case candidates against the body, and take their wording
+    from it.
+
+    Only confirmed candidates are returned: an unconfirmed one is front-matter
+    noise far more often than an article. The body heading supplies the text
+    because contents lines are set small and OCR them badly -- "Library Revi
+    a =" against a printed "LIBRARY HISTORY COLLECTIONS".
+    """
+    found: list[tuple[str, int]] = []
+    for title in titles:
+        want = _normalize(title)
+        if len(want) < MIN_MATCH_LETTERS:
+            continue
+        for sheet in sorted(sheets):
+            match = next((line for line in sheets[sheet]
+                          if _matches_heading(want, line)), None)
+            if match is None:
+                continue
+            display = _title_case(re.sub(r"\s+", " ", match).strip(" .,:;-"))
+            if display and (display, sheet) not in found:
+                found.append((display, sheet))
+            break
+    return found
 
 
 def detect_body_start(sheets: dict[int, list[str]]) -> tuple[int, int] | None:
