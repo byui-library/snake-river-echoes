@@ -54,6 +54,11 @@ class App(ttk.Frame):
         ttk.Entry(top, textvariable=self.folder_var, state="readonly").grid(
             row=0, column=1, sticky="ew", padx=6)
         ttk.Button(top, text="Browse…", command=self.choose_folder).grid(row=0, column=2)
+        # draft() returns a saved review when one exists, so without this the
+        # window would show a stale result forever with no way to re-run.
+        self.reanalyse_button = ttk.Button(top, text="Re-analyse",
+                                           command=self.reanalyse, state="disabled")
+        self.reanalyse_button.grid(row=0, column=3, padx=(4, 0))
         self.folder_note = ttk.Label(top, text="Choose a folder of TIFF page scans.",
                                      foreground="#555")
         self.folder_note.grid(row=1, column=1, sticky="w", padx=6, pady=(2, 8))
@@ -164,11 +169,13 @@ class App(ttk.Frame):
         self.folder_var.set(str(folder))
         self.folder_note.config(text=f"{len(self.sheets)} sheets found.")
         self.preview_cache.clear()
+        self.reanalyse_button.config(state="normal")
         self._start(self._draft_worker, f"Reading {len(self.sheets)} sheets…")
 
     def _start(self, worker, message: str) -> None:
         self.busy = True
         self.build_button.config(state="disabled")
+        self.reanalyse_button.config(state="disabled")
         self.status.config(text=message)
         self.progress.config(value=0, maximum=len(self.sheets) or 1)
         threading.Thread(target=worker, daemon=True).start()
@@ -176,11 +183,32 @@ class App(ttk.Frame):
     def _progress(self, done: int, total: int, label: str) -> None:
         self.events.put(("progress", done, total, label))
 
+    def reanalyse(self) -> None:
+        """Re-run the analysis, discarding the saved review.
+
+        Offered explicitly because the saved review normally wins -- that is
+        what stops a re-open from throwing away an operator's work.
+        """
+        if not self.folder or self.busy:
+            return
+        if self.grid_model and self.grid_model.rows:
+            if not messagebox.askyesno(
+                "SRE Book Builder",
+                "Re-analyse this issue from the scans?\n\n"
+                "The bookmarks currently listed, including any you have edited, "
+                "will be replaced."):
+                return
+        self._overwrite = True
+        self._start(self._draft_worker, "Re-analysing…")
+
     def _draft_worker(self) -> None:
+        overwrite = getattr(self, "_overwrite", False)
+        self._overwrite = False
         try:
+            saved = pipeline.sidecar_path(self.folder).exists() and not overwrite
             issue = pipeline.draft(self.folder, embed_dpi=self._embed_dpi(),
-                                   progress=self._progress)
-            self.events.put(("drafted", issue))
+                                   overwrite=overwrite, progress=self._progress)
+            self.events.put(("drafted", issue, not saved))
         except Exception as exc:  # surfaced as a sentence, not a traceback
             self.events.put(("error", str(exc)))
 
@@ -205,7 +233,7 @@ class App(ttk.Frame):
         self.status.config(text=f"Reading text {min(done + 1, total)} of {total}"
                                 if done < total else "Text read.")
 
-    def _on_drafted(self, issue: Issue) -> None:
+    def _on_drafted(self, issue: Issue, fresh: bool = True) -> None:
         self.busy = False
         self.title_var.set(issue.title or "")
         self.volume_var.set("" if issue.volume is None else str(issue.volume))
@@ -218,14 +246,22 @@ class App(ttk.Frame):
         self._refresh_tree()
         self.build_button.config(state="normal")
 
+        self.reanalyse_button.config(state="normal")
         parked = sum(1 for r in self.grid_model.rows if r.needs_review)
+        count = len(self.grid_model.rows)
+        if fresh:
+            lead = f"{count} bookmarks proposed."
+        else:
+            # Say so, or an old one-bookmark result looks like a failed analysis.
+            lead = (f"Loaded your saved review ({count} bookmarks). "
+                    "Use Re-analyse to read the scans again.")
         self.status.config(
-            text=f"{len(self.grid_model.rows)} bookmarks proposed."
-                 + (f" {parked} need a sheet number." if parked else " Review and build."))
+            text=lead + (f" {parked} need a sheet number." if parked else ""))
 
     def _on_built(self, out: Path) -> None:
         self.busy = False
         self.build_button.config(state="normal")
+        self.reanalyse_button.config(state="normal")
         size = out.stat().st_size / 1e6
         self.status.config(text=f"Built {out.name} ({size:.1f} MB)")
         messagebox.showinfo("SRE Book Builder", f"Built {out.name}\n\n{out}\n\n{size:.1f} MB")
@@ -233,6 +269,7 @@ class App(ttk.Frame):
     def _on_error(self, message: str) -> None:
         self.busy = False
         self.build_button.config(state="normal" if self.grid_model else "disabled")
+        self.reanalyse_button.config(state="normal" if self.folder else "disabled")
         self.status.config(text="")
         messagebox.showerror("SRE Book Builder", message)
 

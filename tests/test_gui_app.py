@@ -105,3 +105,36 @@ def test_blank_number_fields_become_none_not_zero():
         assert app.grid_model.issue.year is None
     finally:
         root.destroy()
+
+
+def test_the_window_can_re_analyse_an_issue():
+    """draft() returns a previously saved review when one exists, so without
+    this the window shows a stale result forever and the operator has no way to
+    re-run the analysis. That is exactly how an issue drafted by an older,
+    worse parser kept showing one bookmark."""
+    _tk, root = _tk_or_skip()
+    from srebook.gui.app import App
+    try:
+        app = App(root)
+        assert hasattr(app, "reanalyse")
+        assert str(app.reanalyse_button["state"]) == "disabled", "nothing to re-analyse yet"
+    finally:
+        root.destroy()
+
+
+def test_the_status_says_when_a_saved_review_was_loaded():
+    """Otherwise 'only the cover' looks like the analysis failed, rather than
+    like an old result being shown back."""
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Bookmark, Issue
+    from srebook.gui.app import App
+    try:
+        app = App(root)
+        app.sheets = [None] * 22
+        app._on_drafted(Issue(bookmarks=[Bookmark("Cover", 1)]), False)
+        assert "saved" in app.status["text"].lower()
+
+        app._on_drafted(Issue(bookmarks=[Bookmark("Cover", 1)]), True)
+        assert "saved" not in app.status["text"].lower()
+    finally:
+        root.destroy()
