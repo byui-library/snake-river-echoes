@@ -143,6 +143,28 @@ citation to page 56 takes a reader to page 56.
 
 ---
 
+## If pages are missing from the scan
+
+Sometimes the program will warn you, right after it reads an issue:
+
+> The contents page refers to printed page(s) 27, 28, which no scan in this
+> folder carries.
+
+It works this out by comparing the page numbers the issue's own contents page
+quotes against the numbers printed on the pages it can see. If the contents
+lists an article on page 28 and no scan carries page 28, that page was almost
+certainly missed at the scanner.
+
+**This is worth stopping for.** Check the issue against the paper copy. If pages
+really are missing, scan them and run the issue again — otherwise you publish a
+book that is quietly incomplete, and the only sign is an article the program
+could not find.
+
+It is not a guess about your work. Of the first five issues run through this
+program, three turned out to be missing pages that nobody had noticed.
+
+---
+
 ## The other settings
 
 **Image quality** — leave on *Balanced (200 DPI)* unless you have a reason.
@@ -177,6 +199,10 @@ The folder has no TIFFs, or you picked the folder above the right one.
 **"... holds 24 pages in one file."**
 The scans are one big TIFF rather than one file per page. Split it and try
 again — the program needs a file per page so it can bookmark and number them.
+
+**An article from the contents page cannot be found anywhere.**
+Check whether its page is in the scan at all. A missing page is the commonest
+reason, and the program warns about it when it can tell.
 
 **The bookmark list is nearly empty.**
 Some issues set their contents page in a way the program reads poorly. Add the
