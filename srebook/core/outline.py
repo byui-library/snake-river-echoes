@@ -54,27 +54,57 @@ def candidate_titles(lines: list[str]) -> list[str]:
             break
 
     titles: list[str] = []
+    pending: str | None = None   # a title whose line ended mid-phrase
+
     for raw in lines[start:]:
-        head = LEADER.split(raw.strip())[0].strip()
-        letters = [c for c in head if c.isalpha()]
-        if len(letters) < MIN_TITLE_LETTERS:
-            continue
-        if sum(c.isupper() for c in letters) / len(letters) < MIN_UPPERCASE_RATIO:
+        title = _title_from_line(raw)
+        if title is None:
+            # A description or author credit ends any continuation.
+            if pending and pending not in titles:
+                titles.append(pending)
+            pending = None
             continue
 
-        # Trailing OCR noise from the leader: "A GOAL IS ACHIEVED ne", or
-        # "WHO AND WHAT IN IDAHO. 99939) 0 2 Ao a".
-        words = head.split()
-        while len(words) > 2 and _is_leader_noise(words[-1]):
-            words.pop()
-        title = re.sub(r"\s+", " ", " ".join(words)).strip(" .,-")
-        if not title or title.upper() == "CONTENTS":
-            continue
-        if len([c for c in title if c.isalpha()]) < MIN_TITLE_LETTERS:
+        if pending:
+            # The previous line ended in a colon, so this one completes it:
+            # "THE COLLECTION OF HISTORICAL DOCUMENTS:" / "A CITIZENS
+            # RESPONSIBILITY" is one article, not two.
+            title = f"{pending} {title}"
+            pending = None
+
+        if title.rstrip().endswith(":"):
+            pending = title
             continue
         if title not in titles:
             titles.append(title)
+
+    if pending and pending not in titles:
+        titles.append(pending)
     return titles
+
+
+def _title_from_line(raw: str) -> str | None:
+    """The article title on this contents line, or None if it is not one."""
+    head = LEADER.split(raw.strip())[0].strip()
+
+    # Strip trailing debris BEFORE judging capitalisation. A page number or a
+    # misread run of leader dots drags the ratio down and loses a real title:
+    # "POETRY a i 83, 44, 45" was discarded entirely.
+    words = head.split()
+    while len(words) > 1 and _is_leader_noise(words[-1]):
+        words.pop()
+    if words and _is_leader_noise(words[-1]) and len(words) == 1:
+        return None
+
+    title = re.sub(r"\s+", " ", " ".join(words)).strip(" .,-")
+    letters = [c for c in title if c.isalpha()]
+    if len(letters) < MIN_TITLE_LETTERS:
+        return None
+    if sum(c.isupper() for c in letters) / len(letters) < MIN_UPPERCASE_RATIO:
+        return None
+    if title.upper().strip(" .:") == "CONTENTS":
+        return None
+    return title
 
 
 def find_contents_sheet(sheets: dict[int, list[str]]) -> int:

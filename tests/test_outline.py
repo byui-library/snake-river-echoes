@@ -226,3 +226,93 @@ def test_a_year_at_the_end_of_a_title_is_kept():
     titles = outline.candidate_titles(["CONTENTS", "EASTERN IDAHO HISTORY FAIR - 1971"])
 
     assert titles == ["EASTERN IDAHO HISTORY FAIR - 1971"]
+
+
+# ------------------------------------ real OCR from Vol 1 No 2 (a second issue) ----
+
+REAL_TOC_2 = [
+    "THE UPPER SNAKE RIVER VALLEY",
+    "HISTORICAL SOCIETY QUARTERLY",
+    "Fall Issue, 1971 Volume 1, Number 2",
+    ". \u201cCONTENTS",
+    "EASTERN IDAHO REVISITED!",
+    "The Editor describes the early history of the area covered by the",
+    "Historical Society 27",
+    "THE BALTLE OF PIERRE\u2019S HOLE",
+    "By Wendell Gillette. The story of this historic battle between the",
+    "Valley, : __ 28",
+    "ANNUAL FALL PUBLIC MEETING ANNOUNCEMENT 30",
+    "COMMUNITY HISTORY",
+    "Chapin is the town chosen for this publication to have its history",
+    "told 31",
+    "POETRY a i 83, 44, 45",
+    "1971 SUMMER FIELD TRIP | 34",
+    "PICTURES OF SUMMER FIELD TRIP 36-37",
+    "THE COLLECTION OF HISTORICAL DOCUMENTS:",
+    "A CITIZENS RESPONSIBILITY",
+    "By Jerry L. Glenn. Mr. Glenn as a librarian at Ricks College is",
+    "CHIEF TARGHEE",
+    "By Brigham D. Madsen. This information reveals the life and",
+    "BOOK LIST 46",
+]
+
+
+def test_a_title_continued_onto_a_second_line_is_one_bookmark_not_two():
+    """Real failure on Vol 1 No 2: 'THE COLLECTION OF HISTORICAL DOCUMENTS:'
+    and 'A CITIZENS RESPONSIBILITY' are one article, and produced two bookmarks
+    both pointing at the same sheet."""
+    titles = outline.candidate_titles(REAL_TOC_2)
+
+    assert "THE COLLECTION OF HISTORICAL DOCUMENTS: A CITIZENS RESPONSIBILITY" in titles
+    assert "A CITIZENS RESPONSIBILITY" not in titles
+
+
+def test_two_unrelated_titles_in_a_row_stay_separate():
+    """The line before ends with its page number, so it is complete."""
+    titles = outline.candidate_titles(REAL_TOC_2)
+
+    assert "ANNUAL FALL PUBLIC MEETING ANNOUNCEMENT" in titles
+    assert "COMMUNITY HISTORY" in titles
+
+
+def test_a_title_is_not_lost_to_trailing_page_number_debris():
+    """'POETRY a i 83, 44, 45' was discarded entirely, so the operator never
+    learned the issue had a poetry section. A flagged bookmark they must place
+    beats an omission they will never notice."""
+    assert "POETRY" in outline.candidate_titles(REAL_TOC_2)
+
+
+def test_page_numbers_are_stripped_from_titles():
+    titles = outline.candidate_titles(REAL_TOC_2)
+
+    assert "BOOK LIST" in titles
+    assert not any(t.endswith("46") for t in titles)
+
+
+def test_the_second_issue_yields_its_articles():
+    titles = outline.candidate_titles(REAL_TOC_2)
+
+    assert titles == [
+        "EASTERN IDAHO REVISITED!",
+        "THE BALTLE OF PIERRE\u2019S HOLE",
+        "ANNUAL FALL PUBLIC MEETING ANNOUNCEMENT",
+        "COMMUNITY HISTORY",
+        "POETRY",
+        "1971 SUMMER FIELD TRIP",
+        "PICTURES OF SUMMER FIELD TRIP",
+        "THE COLLECTION OF HISTORICAL DOCUMENTS: A CITIZENS RESPONSIBILITY",
+        "CHIEF TARGHEE",
+        "BOOK LIST",
+    ]
+
+
+def test_the_first_issue_still_yields_exactly_its_articles():
+    """Tuning for the second issue must not cost the first."""
+    assert outline.candidate_titles(REAL_TOC) == [
+        "A GOAL IS ACHIEVED",
+        "ORAL HISTORY",
+        "EASTERN IDAHO HISTORY FAIR - 1971",
+        "A BRIEF AUTOBIOGRAPHY AND ACCUMULATIVE HISTORY",
+        "ANDREW HENRY",
+        "IDAHO POETRY",
+    ]

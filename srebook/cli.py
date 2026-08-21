@@ -26,7 +26,10 @@ def _describe_draft(issue: Issue, folder: Path) -> None:
     print(f"\nDrafted {pipeline.sidecar_path(folder).name}")
     if issue.year:
         print(f"  Issue        {issue.display_title() or '(untitled)'}")
-    print(f"  Printed p.1  sheet {issue.body_starts_at_sheet}")
+    # State the mapping, not an assumption about it. A quarterly paginated
+    # continuously across the volume starts at page 27, not page 1.
+    print(f"  Page labels  sheet {issue.body_starts_at_sheet} is printed page "
+          f"{issue.body_starts_at_printed}")
     print(f"  Bookmarks    {len(issue.bookmarks)}")
     for b in issue.bookmarks:
         print(f"      sheet {b.sheet:>3}  {b.title}")

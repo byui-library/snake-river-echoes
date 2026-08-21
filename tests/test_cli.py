@@ -142,3 +142,21 @@ def test_build_can_be_forced_for_unattended_use(issue_folder, capsys):
     code = cli.main(["build", str(issue_folder), "--force"])
 
     assert code == 0
+
+
+def test_draft_states_the_page_mapping_accurately(issue_folder, capsys):
+    """A continuously paginated volume starts at page 27, not page 1. Saying
+    'Printed p.1 is sheet 1' is simply false there."""
+    from srebook.core.model import load_sidecar, save_sidecar
+    cli.main(["draft", str(issue_folder)])
+    path = pipeline.sidecar_path(issue_folder)
+    issue = load_sidecar(path)
+    issue.body_starts_at_sheet, issue.body_starts_at_printed = 1, 27
+    save_sidecar(issue, path)
+    capsys.readouterr()
+
+    cli.main(["draft", str(issue_folder)])
+
+    out = capsys.readouterr().out
+    assert "27" in out
+    assert "Printed p.1  sheet 1" not in out
