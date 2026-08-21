@@ -15,6 +15,7 @@ from pathlib import Path
 from ..core.model import Bookmark, Issue, save_sidecar, validate
 
 MAX_LEVEL = 1  # 0 = article, 1 = a piece within a department
+UNPLACED_SHEET = "—"  # em dash: a guess, not an answer
 
 
 @dataclass
@@ -175,6 +176,16 @@ class OutlineGrid:
     def needs_attention(self, index: int) -> bool:
         """A title the parser could not place. Valid, but unreviewed."""
         return self.rows[index].needs_review
+
+    def sheet_display(self, index: int) -> str:
+        """What to show in the Sheet column.
+
+        An unplaced bookmark shows a dash rather than its placeholder sheet.
+        Printing "1" makes a guess look like an answer, and reads as though the
+        bookmark points at the cover or contents page.
+        """
+        row = self.rows[index]
+        return UNPLACED_SHEET if row.needs_review else str(row.sheet)
 
     # ---------------------------------------------------------- saving ----
 

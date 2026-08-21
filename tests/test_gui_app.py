@@ -76,7 +76,7 @@ def test_metadata_fields_are_collected_onto_the_issue():
         app.title_var.set("Snake River Echoes")
         app.volume_var.set("1")
         app.year_var.set("1971")
-        app.body_sheet_var.set("3")
+        app.label_sheet_var.set("3")
 
         app._collect_metadata()
 
@@ -136,5 +136,43 @@ def test_the_status_says_when_a_saved_review_was_loaded():
 
         app._on_drafted(Issue(bookmarks=[Bookmark("Cover", 1)]), True)
         assert "saved" not in app.status["text"].lower()
+    finally:
+        root.destroy()
+
+
+def test_the_window_can_express_a_volume_that_does_not_start_at_page_one():
+    """Vol 1 No 2 runs pages 27-46. A single 'printed page 1 is sheet N' field
+    cannot say that, and silently relabelled the whole issue 1, 2, 3..."""
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Issue
+    from srebook.gui.app import App
+    from srebook.gui.grid import OutlineGrid
+    try:
+        app = App(root)
+        app.grid_model = OutlineGrid(Issue(), sheet_count=20)
+        app.label_sheet_var.set("1")
+        app.label_printed_var.set("27")
+
+        app._collect_metadata()
+
+        issue = app.grid_model.issue
+        assert (issue.body_starts_at_sheet, issue.body_starts_at_printed) == (1, 27)
+    finally:
+        root.destroy()
+
+
+def test_the_detected_page_mapping_is_shown_to_the_operator():
+    """What the drafter worked out must appear in the fields, or the operator
+    cannot tell it was detected -- nor correct it if it is wrong."""
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Issue
+    from srebook.gui.app import App
+    try:
+        app = App(root)
+        app.sheets = [None] * 20
+        app._on_drafted(Issue(body_starts_at_sheet=1, body_starts_at_printed=27), True)
+
+        assert app.label_sheet_var.get() == "1"
+        assert app.label_printed_var.get() == "27"
     finally:
         root.destroy()

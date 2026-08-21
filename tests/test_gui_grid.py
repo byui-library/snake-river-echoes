@@ -281,3 +281,21 @@ def test_confirming_an_already_reviewed_row_is_harmless():
     g.confirm(0)
 
     assert not g.needs_attention(0)
+
+
+def test_an_unplaced_bookmark_does_not_show_a_confident_sheet_number():
+    """The drafter parks what it cannot find on sheet 1. Displaying "1" makes a
+    placeholder look like an answer, and reads as though the bookmark points at
+    the contents page."""
+    g = a_grid([Bookmark("POETRY", 1, needs_review=True), Bookmark("Cover", 1)])
+
+    assert g.sheet_display(0) == "—"
+    assert g.sheet_display(1) == "1"
+
+
+def test_confirming_reveals_the_sheet_number():
+    g = a_grid([Bookmark("COVER", 1, needs_review=True)])
+
+    g.confirm(0)
+
+    assert g.sheet_display(0) == "1"

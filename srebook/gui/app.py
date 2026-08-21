@@ -76,7 +76,8 @@ class App(ttk.Frame):
         self.issue_var = tk.StringVar()
         self.year_var = tk.StringVar()
         self.publisher_var = tk.StringVar()
-        self.body_sheet_var = tk.StringVar(value="1")
+        self.label_sheet_var = tk.StringVar(value="1")
+        self.label_printed_var = tk.StringVar(value="1")
         self.quality_var = tk.StringVar(value="Balanced (200 DPI)")
 
         ttk.Label(meta, text="Title").grid(row=0, column=0, sticky="w")
@@ -97,8 +98,14 @@ class App(ttk.Frame):
 
         labels = ttk.Frame(meta)
         labels.grid(row=3, column=0, columnspan=4, sticky="w", pady=(8, 0))
-        ttk.Label(labels, text="Printed page 1 is sheet").pack(side="left")
-        ttk.Entry(labels, textvariable=self.body_sheet_var, width=5).pack(
+        # Two fields, because one cannot express a volume paginated
+        # continuously: Vol 1 No 2 runs pages 27-46, and "printed page 1 is
+        # sheet N" silently relabelled the whole issue 1, 2, 3...
+        ttk.Label(labels, text="Sheet").pack(side="left")
+        ttk.Entry(labels, textvariable=self.label_sheet_var, width=4).pack(
+            side="left", padx=4)
+        ttk.Label(labels, text="is printed page").pack(side="left")
+        ttk.Entry(labels, textvariable=self.label_printed_var, width=5).pack(
             side="left", padx=(4, 16))
         ttk.Label(labels, text="Image quality").pack(side="left")
         ttk.Combobox(labels, textvariable=self.quality_var, width=18, state="readonly",
@@ -264,7 +271,8 @@ class App(ttk.Frame):
         self.issue_var.set("" if issue.issue is None else str(issue.issue))
         self.year_var.set("" if issue.year is None else str(issue.year))
         self.publisher_var.set(issue.publisher or "")
-        self.body_sheet_var.set(str(issue.body_starts_at_sheet))
+        self.label_sheet_var.set(str(issue.body_starts_at_sheet))
+        self.label_printed_var.set(str(issue.body_starts_at_printed))
 
         self.grid_model = OutlineGrid(issue, sheet_count=len(self.sheets))
         self._refresh_tree()
@@ -305,7 +313,8 @@ class App(ttk.Frame):
         for i, row in enumerate(self.grid_model.rows):
             parent = parents.get(0, "") if row.level else ""
             node = self.tree.insert(
-                parent, "end", iid=str(i), text=row.title, values=(row.sheet,),
+                parent, "end", iid=str(i), text=row.title,
+                values=(self.grid_model.sheet_display(i),),
                 open=True,
                 tags=("attention",) if self.grid_model.needs_attention(i) else (),
             )
@@ -443,10 +452,12 @@ class App(ttk.Frame):
                           ("year", self.year_var)):
             text = var.get().strip()
             setattr(issue, attr, int(text) if text.isdigit() else None)
-        sheet = self.body_sheet_var.get().strip()
+        sheet = self.label_sheet_var.get().strip()
+        printed = self.label_printed_var.get().strip()
         if sheet.isdigit():
             issue.body_starts_at_sheet = int(sheet)
-            issue.body_starts_at_printed = 1
+        if printed.isdigit():
+            issue.body_starts_at_printed = int(printed)
 
     def _autosave(self) -> None:
         if not (self.grid_model and self.folder):
