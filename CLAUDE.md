@@ -27,14 +27,19 @@ one of them — resolve it explicitly rather than silently following the code.
 Everything is built and verified. `py -m pytest` (185 tests) and
 `py packaging/build.py` both work from a clean checkout plus the sample scans.
 
-**The open question is generalisation.** Every rule in `core/outline.py` was tuned
-against a single issue: titles are ALL-CAPS on the contents page, and reappear
-verbatim where the article begins. Whether that holds for Vol 1 No 2, or a 1985
-issue with a different typesetter, is untested. Expect to loosen the heuristics.
+**Four issues have been processed** (Vol 1 Nos 1-4, 1971-72), and each one broke
+something new in `core/outline.py` -- see the commit history. All four are pinned by
+tests built from their own real OCR, so tuning for one cannot silently cost another.
+
+The curve has not flattened. All four share a typesetter; **an issue from a different
+decade is the next real test**, and the parser should be expected to need work.
 
 Also untested: **an issue containing photographs.** Vol 1 No 1 is typewritten text
 with a line-drawing cover, so the 200 DPI embed decision has never been judged
 against a halftone.
+
+What has never needed changing across all four issues: OCR, the text layer, deskew,
+page labels, metadata and PDF assembly. The fragile part is narrow.
 
 ### Verified, with evidence
 
@@ -125,7 +130,7 @@ editing a bookmark and rebuilding must never re-OCR.
 py -m srebook.cli draft "Image Files/SRE Vol 1 Number 1"    # OCR + propose outline
 py -m srebook.cli build "Image Files/SRE Vol 1 Number 1"    # after reviewing the sidecar
 py -m srebook.gui                                            # the window
-py -m pytest                                                 # 185 tests, ~15s
+py -m pytest                                                 # 239 tests, ~20s
 ```
 
 Drafting an issue takes about 80 seconds; building from cached OCR is near-instant.
@@ -203,3 +208,18 @@ Non-obvious things the spike established — read the findings doc before writin
 - **Candidate titles stop at the contents sheet.** Reading further picks up article
   headings, so an article whose heading is punctuated differently from its contents entry
   earns a second, duplicate bookmark.
+
+## Phase 3+ lessons, from four real issues
+
+- **A contents page may be Title Case, not caps.** Capitalisation alone cannot then
+  separate a title from the description under it, so those candidates are kept only
+  where the body confirms them, and take their wording from the body heading.
+- **The CONTENTS marker may be buried in a header line** ("Spring Issue, 1972 CONTENTS
+  Volume 1, Number 4"). Requiring a line of its own made the cover's masthead the outline.
+- **Page labels are not 1..N.** The journal is paginated continuously across each volume:
+  No 2 is 27-46, No 3 49-72, No 4 73-94. The GUI briefly hardcoded the printed number to
+  1, which silently destroyed a correct detection -- express the mapping, never assume it.
+- **The front matter is known, not guessed.** Sheet 1 is the cover and the contents sheet
+  was already found; both are bookmarked automatically.
+- **Never write source files through a shell heredoc containing escapes.** Two did not
+  survive, and one silently compiled a regex as `CONTENTS`.

@@ -113,6 +113,12 @@ Windows Sandbox — a pristine, disposable Windows with no Python and no Tessera
 with networking switched off — installs the app, and builds a real issue. That is the
 only environment in which "the installer works" means anything.
 
+## For operators
+
+[docs/operator-guide.md](docs/operator-guide.md) — a printable page for the staff who
+will run this: the flow, what a red bookmark means, and the difference between a sheet
+and a printed page.
+
 ## Development
 
 See [CLAUDE.md](CLAUDE.md) for constraints, vocabulary, and environment notes.
