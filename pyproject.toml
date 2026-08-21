@@ -1,6 +1,6 @@
 [project]
 name = "srebook"
-version = "0.1.1"
+version = "0.1.2"
 description = "Turns TIFF page scans into searchable, bookmarked, page-labeled PDFs"
 requires-python = ">=3.11"
 dependencies = [
