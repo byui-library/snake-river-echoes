@@ -160,10 +160,23 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
     return issue
 
 
+def _clear_review_flags(bookmarks) -> None:
+    for b in bookmarks:
+        b.needs_review = False
+        _clear_review_flags(b.children)
+
+
 # ----------------------------------------------------------------- build ----
 
-def build(folder: Path, progress: Progress | None = None) -> Path:
-    """Assemble the reviewed issue into its PDF."""
+def build(folder: Path, progress: Progress | None = None,
+          force: bool = False) -> Path:
+    """Assemble the reviewed issue into its PDF.
+
+    Refuses while any bookmark is still flagged unreviewed: those are parked on
+    a guessed sheet, and publishing them gives a reader a bookmark that goes to
+    the wrong page with nothing to indicate it. `force` is for unattended use
+    and has to be asked for.
+    """
     folder = Path(folder)
     sheets = _sheets(folder)
     side = sidecar_path(folder)
@@ -173,6 +186,8 @@ def build(folder: Path, progress: Progress | None = None) -> Path:
         )
 
     issue = load_sidecar(side)
+    if force:
+        _clear_review_flags(issue.bookmarks)
     pages = _ocr_sheets(sheets, folder, issue.embed_dpi, progress)
 
     try:

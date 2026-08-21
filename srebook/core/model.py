@@ -159,6 +159,12 @@ def validate(issue: Issue, sheet_count: int) -> list[str]:
                     f'Bookmark "{b.title}" points at sheet {b.sheet}, '
                     f"but this issue has {sheet_count} sheets."
                 )
+            if b.needs_review:
+                problems.append(
+                    f'Bookmark "{b.title}" was not found in the body, so it is '
+                    f"parked on sheet {b.sheet}. Set the sheet it really starts "
+                    "on, or remove it."
+                )
             if b.children and depth >= MAX_DEPTH:
                 problems.append(
                     f'Bookmark "{b.title}" nests deeper than two levels, '

@@ -63,7 +63,11 @@ set RC=%ERRORLEVEL%
 if "%RC%"=="0" call :pass "draft completed"
 if not "%RC%"=="0" call :fail "draft failed (exit %RC%)"
 
-"%APP%\srebook.exe" build C:\work >> "%RESULTS%" 2>&1
+REM --force because nobody reviews the draft in an unattended run. The build
+REM refuses unreviewed bookmarks by design; this test is about packaging, not
+REM editorial review, so it says so out loud rather than hiding the override.
+call :note "building with --force (unattended: no operator reviewed the draft)"
+"%APP%\srebook.exe" build C:\work --force >> "%RESULTS%" 2>&1
 set RC=%ERRORLEVEL%
 if "%RC%"=="0" call :pass "build completed"
 if not "%RC%"=="0" call :fail "build failed (exit %RC%)"

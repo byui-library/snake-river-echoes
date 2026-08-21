@@ -153,3 +153,37 @@ def test_reviewed_bookmarks_omit_the_flag(tmp_path):
     save_sidecar(an_issue(bookmarks=[Bookmark("Cover", 1)]), path)
 
     assert "needs_review" not in json.loads(path.read_text(encoding="utf-8"))["bookmarks"][0]
+
+
+def test_a_bookmark_still_flagged_for_review_blocks_the_build():
+    """The drafter parks titles it cannot locate on sheet 1. Publishing that
+    silently gives the reader a bookmark that goes to the wrong page with no
+    indication anything is wrong."""
+    issue = an_issue(bookmarks=[Bookmark("Front Cover", 1),
+                                Bookmark("Idaho Poetry", 1, needs_review=True)])
+
+    problems = validate(issue, sheet_count=22)
+
+    assert any("Idaho Poetry" in p for p in problems)
+    assert not any("Front Cover" in p for p in problems)
+
+
+def test_the_review_message_says_what_to_do():
+    issue = an_issue(bookmarks=[Bookmark("Idaho Poetry", 1, needs_review=True)])
+
+    message = " ".join(validate(issue, sheet_count=22))
+
+    assert "sheet" in message.lower()
+
+
+def test_a_flagged_child_blocks_the_build_too():
+    issue = an_issue(bookmarks=[Bookmark("Poetry", 19, children=[
+        Bookmark("Poem", 1, needs_review=True)])])
+
+    assert any("Poem" in p for p in validate(issue, sheet_count=22))
+
+
+def test_a_reviewed_issue_still_builds():
+    issue = an_issue(bookmarks=[Bookmark("Front Cover", 1), Bookmark("Poetry", 19)])
+
+    assert validate(issue, sheet_count=22) == []

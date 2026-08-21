@@ -52,7 +52,7 @@ def _cmd_draft(args) -> int:
 
 def _cmd_build(args) -> int:
     folder = Path(args.folder)
-    out = pipeline.build(folder, progress=_progress)
+    out = pipeline.build(folder, progress=_progress, force=args.force)
     issue = load_sidecar(pipeline.sidecar_path(folder))
 
     def count(bookmarks):
@@ -123,6 +123,8 @@ def main(argv: list[str] | None = None) -> int:
 
     build = sub.add_parser("build", help="build the PDF from a reviewed draft")
     build.add_argument("folder", help="folder of TIFF page scans")
+    build.add_argument("--force", action="store_true",
+                       help="build even though some bookmarks are unreviewed")
     build.set_defaults(func=_cmd_build)
 
     doctor = sub.add_parser(

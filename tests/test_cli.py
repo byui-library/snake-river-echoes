@@ -111,3 +111,34 @@ def test_force_redrafts_over_a_review(issue_folder):
 def test_no_arguments_shows_usage(capsys):
     with pytest.raises(SystemExit):
         cli.main([])
+
+
+def test_build_refuses_an_unreviewed_draft(issue_folder, capsys):
+    """The operator is the accuracy backstop. Publishing unreviewed bookmarks
+    is the one thing the flow must not do quietly."""
+    from srebook.core.model import Bookmark, load_sidecar, save_sidecar
+    cli.main(["draft", str(issue_folder)])
+    path = pipeline.sidecar_path(issue_folder)
+    issue = load_sidecar(path)
+    issue.bookmarks = [Bookmark("IDAHO POETRY", 1, needs_review=True)]
+    save_sidecar(issue, path)
+    capsys.readouterr()
+
+    code = cli.main(["build", str(issue_folder)])
+
+    assert code != 0
+    assert "IDAHO POETRY" in capsys.readouterr().err
+
+
+def test_build_can_be_forced_for_unattended_use(issue_folder, capsys):
+    """Automation needs a way through, but it has to be asked for."""
+    from srebook.core.model import Bookmark, load_sidecar, save_sidecar
+    cli.main(["draft", str(issue_folder)])
+    path = pipeline.sidecar_path(issue_folder)
+    issue = load_sidecar(path)
+    issue.bookmarks = [Bookmark("IDAHO POETRY", 1, needs_review=True)]
+    save_sidecar(issue, path)
+
+    code = cli.main(["build", str(issue_folder), "--force"])
+
+    assert code == 0
