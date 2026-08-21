@@ -116,3 +116,10 @@ only environment in which "the installer works" means anything.
 ## Development
 
 See [CLAUDE.md](CLAUDE.md) for constraints, vocabulary, and environment notes.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Bundled dependencies keep their own permissive
+terms (Tesseract is Apache 2.0). Ghostscript is deliberately not used: it is
+AGPL, and its obligations would follow this program to every archive that
+installs it.
