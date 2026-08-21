@@ -510,3 +510,120 @@ def test_the_contents_sheet_is_reported_when_present():
     sheets = {1: ["COVER"], 2: ["CONTENTS", "ORAL HISTORY"], 3: ["ORAL HISTORY"]}
 
     assert outline.detect_contents_sheet(sheets) == 2
+
+
+# ---------------------------------------- title case, asked for by an archivist ----
+
+def test_shouting_titles_become_title_case():
+    assert outline.title_case("A GOAL IS ACHIEVED") == "A Goal Is Achieved"
+    assert outline.title_case("ORAL HISTORY") == "Oral History"
+
+
+def test_minor_words_stay_lower_case():
+    assert outline.title_case("WHO AND WHAT IN IDAHO") == "Who and What in Idaho"
+
+
+def test_the_first_word_is_capitalised_even_if_minor():
+    assert outline.title_case("THE MASSACRE ON BIRCH CREEK") == "The Massacre on Birch Creek"
+
+
+def test_a_word_after_a_colon_is_capitalised():
+    """'...DOCUMENTS: A CITIZENS RESPONSIBILITY' -- the A begins a new phrase."""
+    assert outline.title_case("THE COLLECTION OF HISTORICAL DOCUMENTS: A CITIZENS RESPONSIBILITY") \
+        == "The Collection of Historical Documents: A Citizens Responsibility"
+
+
+def test_words_that_begin_with_a_number_still_capitalise_their_letters():
+    assert outline.title_case("1971-SUMMER FIELD TRIP") == "1971-Summer Field Trip"
+
+
+def test_an_apostrophe_does_not_start_a_new_word():
+    assert outline.title_case("PIERRE'S HOLE RENDEZVOUS") == "Pierre's Hole Rendezvous"
+    assert outline.title_case("THE BATTLE OF PIERRE\u2019S HOLE") \
+        == "The Battle of Pierre\u2019s Hole"
+
+
+def test_a_year_or_number_is_left_alone():
+    assert outline.title_case("EASTERN IDAHO HISTORY FAIR - 1971") \
+        == "Eastern Idaho History Fair - 1971"
+    assert outline.title_case("DEDICATION OF MARKER #378") == "Dedication of Marker #378"
+
+
+def test_already_cased_titles_are_not_disturbed():
+    """An operator's own wording, and titles taken from a Title Case contents
+    page, must survive unchanged."""
+    assert outline.title_case("A Critical Look at Historical Editing") \
+        == "A Critical Look at Historical Editing"
+
+
+# ------------- headings the contents page never lists, asked for by an archivist ----
+
+def test_a_poem_headed_in_the_body_is_offered_as_its_own_bookmark():
+    """The contents page says only "IDAHO POETRY". The poems carry their own
+    printed headings, and an archivist wants those, not the category."""
+    body = {19: ["MY HOME IN IDAHO", "by J. Edgar Birch", "I come to this place"],
+            21: ["THE GRAND OLD SNAKE", "by J. Edgar Birch", "So oft I've sat"]}
+
+    found = outline.unclaimed_headings(body, claimed=["Idaho Poetry"])
+
+    assert ("My Home in Idaho", 19) in found
+    assert ("The Grand Old Snake", 21) in found
+
+
+def test_a_heading_already_claimed_is_not_offered_twice():
+    body = {4: ["ORAL HISTORY", "The introduction of the recorder"]}
+
+    assert outline.unclaimed_headings(body, claimed=["Oral History"]) == []
+
+
+def test_a_running_head_is_not_offered():
+    """The society's name across the top of every page is not an article."""
+    body = {s: ["UPPER SNAKE RIVER VALLEY HISTORICAL SOCIETY", "prose"]
+            for s in range(3, 9)}
+
+    assert outline.unclaimed_headings(body, claimed=[]) == []
+
+
+def test_prose_is_not_offered():
+    body = {5: ["As you wander through the libraries of Idaho and look for books"]}
+
+    assert outline.unclaimed_headings(body, claimed=[]) == []
+
+
+def test_a_heading_deep_in_the_page_is_not_offered():
+    """An article opens at the top of its page. A shout mid-column is usually a
+    pull quote or a subheading."""
+    body = {5: ["prose", "prose", "prose", "prose", "SOMETHING SHOUTED"]}
+
+    assert outline.unclaimed_headings(body, claimed=[]) == []
+
+
+def test_the_earliest_sheet_wins_for_a_repeated_heading():
+    body = {7: ["CHIEF TARGHEE", "prose"], 9: ["CHIEF TARGHEE", "prose"]}
+
+    assert outline.unclaimed_headings(body, claimed=[]) == [("Chief Targhee", 7)]
+
+
+def test_index_entries_are_not_offered_as_headings():
+    """Vol 1 No 4 ends with a volume index set in caps."""
+    body = {20: ["AHLSTROM, PETER, 61, 91", "GLASS, HUGH, 15, 17"]}
+
+    assert outline.unclaimed_headings(body, claimed=[]) == []
+
+
+def test_a_caption_sentence_is_not_offered():
+    body = {14: ["TRANSPORTATION IN EASTERN IDAHO WAS OF GRAVE CONCERN TO THOSE "
+                 "INTERESTED IN THE BUILDING UP OF COMMUNITIES AND TRADE."]}
+
+    assert outline.unclaimed_headings(body, claimed=[]) == []
+
+
+def test_a_fragment_of_a_claimed_title_is_not_offered():
+    """The body splits 'THE COLLECTION OF HISTORICAL DOCUMENTS: A CITIZENS
+    RESPONSIBILITY' over two lines; neither half is a new article."""
+    body = {12: ["THE COLLECTION OF HISTORICAL", "DOCUMENTS", "A CITIZENS RESPONSIBILITY"]}
+
+    found = outline.unclaimed_headings(
+        body, claimed=["The Collection of Historical Documents: A Citizens Responsibility"])
+
+    assert found == []

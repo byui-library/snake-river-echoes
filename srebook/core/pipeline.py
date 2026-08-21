@@ -185,8 +185,21 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
         # An unlocated title is parked on sheet 1 rather than dropped -- the
         # operator needs to see it in the grid to place it -- and flagged, so
         # nothing downstream has to guess which sheet-1 entries are unplaced.
+        # Cased here and only here, so an operator's own wording is never
+        # rewritten behind their back on a later draft.
         issue.bookmarks.append(
-            Bookmark(title, sheet if sheet else 1, needs_review=sheet is None))
+            Bookmark(outline.title_case(title), sheet if sheet else 1,
+                     needs_review=sheet is None))
+
+    # Headings printed in the body that the contents page never listed: the
+    # individual poems under a "POETRY" category, a book list headed something
+    # else entirely. Flagged, because these come from the parser's own reading
+    # rather than from the issue's own table of contents.
+    for title, sheet in outline.unclaimed_headings(
+            body, [b.title for b in issue.bookmarks]):
+        issue.bookmarks.append(Bookmark(title, sheet, needs_review=True))
+
+    issue.bookmarks.sort(key=lambda b: b.sheet)
 
     output_dir(folder).mkdir(parents=True, exist_ok=True)
     save_sidecar(issue, existing)

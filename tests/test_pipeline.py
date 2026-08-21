@@ -89,8 +89,8 @@ def test_draft_guesses_issue_metadata(issue_folder):
 def test_draft_locates_article_titles(issue_folder):
     issue = pipeline.draft(issue_folder)
 
-    assert ("ORAL HISTORY", 3) in [(b.title, b.sheet) for b in issue.bookmarks]
-    assert ("ANDREW HENRY", 5) in [(b.title, b.sheet) for b in issue.bookmarks]
+    assert ("Oral History", 3) in [(b.title, b.sheet) for b in issue.bookmarks]
+    assert ("Andrew Henry", 5) in [(b.title, b.sheet) for b in issue.bookmarks]
 
 
 def test_draft_detects_where_the_body_starts(issue_folder):
@@ -118,7 +118,7 @@ def test_unlocated_titles_are_still_offered_to_the_operator(tmp_path, make_sheet
     issue = pipeline.draft(folder)
 
     articles = [b for b in issue.bookmarks if b.title not in FRONT_MATTER]
-    assert [b.title for b in articles] == ["IDAHO POETRY"]
+    assert [b.title for b in articles] == ["Idaho Poetry"]
     assert articles[0].sheet == 1  # parked on sheet 1 for the operator
     assert articles[0].needs_review
 
@@ -235,7 +235,7 @@ def test_a_body_heading_does_not_become_a_second_bookmark(tmp_path, make_sheet):
     issue = pipeline.draft(folder)
 
     articles = [b for b in issue.bookmarks if b.title not in FRONT_MATTER]
-    assert [b.title for b in articles] == ["A GOAL IS ACHIEVED"]
+    assert [b.title for b in articles] == ["A Goal Is Achieved"]
     assert articles[0].sheet == 3
 
 
@@ -259,8 +259,8 @@ def test_draft_marks_only_the_titles_it_could_not_locate(tmp_path, make_sheet):
     issue = pipeline.draft(folder)
 
     flags = {b.title: b.needs_review for b in issue.bookmarks}
-    assert flags["ORAL HISTORY"] is False
-    assert flags["IDAHO POETRY"] is True
+    assert flags["Oral History"] is False
+    assert flags["Idaho Poetry"] is True
 
 
 def test_a_title_case_contents_page_still_produces_bookmarks(tmp_path, make_sheet):
@@ -352,3 +352,78 @@ def test_no_contents_bookmark_when_there_is_no_contents_page(tmp_path, make_shee
     issue = pipeline.draft(folder)
 
     assert "Table of Contents" not in [b.title for b in issue.bookmarks]
+
+
+def test_drafted_bookmarks_are_title_case(issue_folder):
+    """Asked for by a special collections archivist: a bookmark panel of
+    shouting caps is not how a catalogue reads."""
+    issue = pipeline.draft(issue_folder)
+
+    titles = [b.title for b in issue.bookmarks]
+    assert "Oral History" in titles
+    assert "ORAL HISTORY" not in titles
+
+
+def test_title_case_is_applied_once_at_draft_time_only(issue_folder):
+    """An operator's own wording must never be re-cased behind their back."""
+    from srebook.core.model import Bookmark, load_sidecar, save_sidecar
+    pipeline.draft(issue_folder)
+    path = pipeline.sidecar_path(issue_folder)
+    issue = load_sidecar(path)
+    issue.bookmarks = [Bookmark("WPA Records and the CCC", 3)]
+    save_sidecar(issue, path)
+
+    again = pipeline.draft(issue_folder)
+
+    assert [b.title for b in again.bookmarks] == ["WPA Records and the CCC"]
+
+
+def test_draft_offers_headings_the_contents_page_never_listed(tmp_path, make_sheet):
+    """An archivist asked for poems by their own titles rather than the
+    category. They are printed as headings; the parser simply never looked."""
+    folder = tmp_path / "issue"
+    folder.mkdir()
+    for n in range(1, 5):
+        src = make_sheet(name=f"P_{n:02d}.tif")
+        src.replace(folder / src.name)
+    cache = pipeline.cache_dir(folder)
+    cache.mkdir(parents=True)
+    (cache / "P_01.hocr").write_bytes(hocr_page([("THE QUARTERLY", (200, 300, 1400, 360))]))
+    (cache / "P_02.hocr").write_bytes(hocr_page([
+        ("CONTENTS", (200, 300, 900, 360)),
+        ("IDAHO POETRY", (200, 400, 1400, 460))]))
+    (cache / "P_03.hocr").write_bytes(hocr_page([
+        ("MY HOME IN IDAHO", (200, 300, 1500, 360)),
+        ("I come to this place a long time ago", (200, 400, 1800, 460))]))
+    (cache / "P_04.hocr").write_bytes(hocr_page([
+        ("THE GRAND OLD SNAKE", (200, 300, 1600, 360)),
+        ("So oft I have sat beside the mighty Snake", (200, 400, 1800, 460))]))
+
+    issue = pipeline.draft(folder)
+
+    found = {(b.title, b.sheet) for b in issue.bookmarks}
+    assert ("My Home in Idaho", 3) in found
+    assert ("The Grand Old Snake", 4) in found
+
+
+def test_suggested_headings_are_flagged_for_review(tmp_path, make_sheet):
+    """They come from the parser's own reading, not from the printed contents,
+    so a person confirms them before they are published."""
+    folder = tmp_path / "issue"
+    folder.mkdir()
+    for n in (1, 2, 3):
+        src = make_sheet(name=f"Q_{n:02d}.tif")
+        src.replace(folder / src.name)
+    cache = pipeline.cache_dir(folder)
+    cache.mkdir(parents=True)
+    (cache / "Q_01.hocr").write_bytes(hocr_page([("THE QUARTERLY", (200, 300, 1400, 360))]))
+    (cache / "Q_02.hocr").write_bytes(hocr_page([("CONTENTS", (200, 300, 900, 360))]))
+    (cache / "Q_03.hocr").write_bytes(hocr_page([
+        ("BOARD OF DIRECTORS", (200, 300, 1500, 360)),
+        ("Harold Forbush, Chairman", (200, 400, 1800, 460))]))
+
+    issue = pipeline.draft(folder)
+
+    suggested = [b for b in issue.bookmarks if b.title == "Board of Directors"]
+    assert suggested and suggested[0].needs_review
+    assert suggested[0].sheet == 3

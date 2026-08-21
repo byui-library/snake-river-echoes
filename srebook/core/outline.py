@@ -282,22 +282,54 @@ def locate_titles(titles: list[str], sheets: dict[int, list[str]]
     return located
 
 
-def _title_case(text: str) -> str:
+def title_case(text: str) -> str:
     """A printed heading is set in caps; a bookmark panel reads better without
-    the shouting. Small words stay lowercase unless they lead."""
+    the shouting, and archivists expect title case.
+
+    Minor words stay lower case unless they lead or follow a colon. Letters are
+    capitalised at the start of a word or after a hyphen or slash, so
+    "1971-SUMMER" becomes "1971-Summer" -- but never after an apostrophe, which
+    would give "Pierre'S".
+    """
     words = text.split()
     out = []
-    for i, word in enumerate(words):
+    start_of_phrase = True
+    for word in words:
         letters = "".join(c for c in word if c.isalpha())
         if not letters:
             out.append(word)
+            if word.endswith(":"):
+                start_of_phrase = True
             continue
+
         lower = word.lower()
-        if i and letters.lower() in SMALL_WORDS:
-            out.append(lower)
+        if not start_of_phrase and letters.lower() in SMALL_WORDS:
+            cased = lower
         else:
-            out.append(lower[0].upper() + lower[1:])
+            cased = _capitalise_runs(lower)
+        out.append(cased)
+        start_of_phrase = word.endswith(":")
     return " ".join(out)
+
+
+def _capitalise_runs(word: str) -> str:
+    """Upper-case the first letter of each alphabetic run, apostrophes aside."""
+    chars = list(word)
+    fresh = True
+    for i, ch in enumerate(chars):
+        if ch.isalpha():
+            if fresh:
+                chars[i] = ch.upper()
+            fresh = False
+        elif ch in "'’":
+            fresh = False          # Pierre's, not Pierre'S
+        else:
+            fresh = True
+    return "".join(chars)
+
+
+# Kept for internal callers that predate the public name.
+_title_case = title_case
 
 
 def locate_loose_titles(titles: list[str], sheets: dict[int, list[str]]
@@ -325,6 +357,68 @@ def locate_loose_titles(titles: list[str], sheets: dict[int, list[str]]
                 found.append((display, sheet))
             break
     return found
+
+
+HEADING_TOP_LINES = 3        # an article opens at the top of its page
+RUNNING_HEAD_SHEETS = 3      # the same shout on this many pages is furniture
+MAX_HEADING_WORDS = 8        # longer than this is a caption or a sentence
+INDEX_ENTRY_COMMAS = 2       # "AHLSTROM, PETER, 61, 91" is an index line
+
+
+def unclaimed_headings(sheets: dict[int, list[str]],
+                       claimed: list[str]) -> list[tuple[str, int]]:
+    """Printed headings in the body that the contents page never listed.
+
+    A contents page says "IDAHO POETRY"; the poems underneath carry their own
+    headings, and those are what a reader wants in the outline. The same is
+    true of a book list headed "WESTERN HISTORY BOOKS".
+
+    Only shouted lines near the top of a page qualify, a heading repeated
+    across several pages is page furniture rather than an article, and anything
+    already claimed by a contents entry is left alone.
+    """
+    already = {_normalize(t) for t in claimed}
+
+    seen: dict[str, list[int]] = {}
+    text_of: dict[str, str] = {}
+    for sheet in sorted(sheets):
+        for line in sheets[sheet][:HEADING_TOP_LINES]:
+            stripped = line.strip()
+            letters = [c for c in stripped if c.isalpha()]
+            if len(letters) < MIN_TITLE_LETTERS:
+                continue
+            if sum(c.isupper() for c in letters) / len(letters) < MIN_UPPERCASE_RATIO:
+                continue
+            if not _could_be_a_heading(stripped):
+                continue
+            key = _normalize(stripped)
+            if len(key) < MIN_MATCH_LETTERS:
+                continue
+            seen.setdefault(key, []).append(sheet)
+            text_of.setdefault(key, stripped)
+
+    found: list[tuple[str, int]] = []
+    for key, on_sheets in seen.items():
+        if len(on_sheets) >= RUNNING_HEAD_SHEETS:
+            continue
+        # The body may split a claimed title over two lines, so neither half
+        # matches it from either end -- check containment both ways.
+        if any(key in c or c in key for c in already):
+            continue
+        found.append((title_case(text_of[key].strip(" .,:;-")), min(on_sheets)))
+    return sorted(found, key=lambda pair: pair[1])
+
+
+def _could_be_a_heading(text: str) -> bool:
+    """Reject the things that shout but are not article headings."""
+    if len(text.split()) > MAX_HEADING_WORDS:
+        return False
+    if text.rstrip().endswith((".", ",", ";")):
+        return False
+    # An index entry: several commas and a page number or two.
+    if text.count(",") >= INDEX_ENTRY_COMMAS and any(c.isdigit() for c in text):
+        return False
+    return True
 
 
 def detect_body_start(sheets: dict[int, list[str]]) -> tuple[int, int] | None:

@@ -47,7 +47,7 @@ def test_draft_reports_titles_it_could_not_place(tmp_path, make_sheet, capsys):
 
     cli.main(["draft", str(folder)])
 
-    assert "IDAHO POETRY" in capsys.readouterr().out
+    assert "Idaho Poetry" in capsys.readouterr().out
 
 
 def test_build_succeeds_and_reports_the_pdf(issue_folder, capsys):
