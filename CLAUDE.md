@@ -10,7 +10,7 @@ scans into a single searchable, bookmarked, page-labeled PDF.
 Built for digitizing *Snake River Echoes*, the journal of the Upper Snake River Valley
 Historical Society, but intended to be handed to other archives as an installer.
 
-**Current state: released through v0.1.4 and in daily use.** The installer is verified
+**Current state: released through v0.1.6 and in daily use.** The installer is verified
 on a pristine Windows with no Python and no Tesseract, and a special collections
 employee is processing real issues with it.
 
@@ -21,8 +21,8 @@ one of them — resolve it explicitly rather than silently following the code.
 
 ## Next session — start here
 
-Released through v0.1.4 and in use by a special collections employee. `py -m pytest`
-(301 tests) and `py packaging/build.py` both work from a clean checkout plus the
+Released through v0.1.6 and in use by a special collections employee. `py -m pytest`
+(306 tests) and `py packaging/build.py` both work from a clean checkout plus the
 sample scans.
 
 **Everything of consequence since v0.1.0 was found by someone using the program,
@@ -56,7 +56,7 @@ and reading the folder.
 | Deskew applied to both derivatives | test, and the constraint is documented below |
 | Packaged build refuses a system Tesseract | frozen exe exits 1 on this machine, which has one installed |
 | Installer works with no dev tools | [clean-machine test](docs/superpowers/specs/2026-08-21-clean-machine-test-pass.txt), Windows Sandbox, networking off |
-| Missing pages reported by the packaged build | clean-machine test on v0.1.3 names pages 27, 28 of Vol 1 No 2 |
+| Missing pages reported by the packaged build | clean-machine test on v0.1.6 names pages 27, 28 of Vol 1 No 2 |
 | AppleDouble files ignored | packaged build reads 22 sheets from a folder of 22 scans + 22 ghosts |
 
 ## Hard constraints
@@ -229,5 +229,10 @@ Non-obvious things the spike established — read the findings doc before writin
   1, which silently destroyed a correct detection -- express the mapping, never assume it.
 - **The front matter is known, not guessed.** Sheet 1 is the cover and the contents sheet
   was already found; both are bookmarked automatically.
+- **A setting whose effect the operator cannot see will be worked around.** The front
+  matter's page labels were right, and the Printed page column showed a dash for them, so
+  an operator with no confirmation that "sheet 3 is printed page 1" had taken effect typed
+  `0` into the column instead. The fix was to display `i`, `ii`: the feature was never
+  missing, only invisible. Reserve the dash for genuinely unknown.
 - **Never write source files through a shell heredoc containing escapes.** Two did not
   survive, and one silently compiled a regex as `CONTENTS`.
