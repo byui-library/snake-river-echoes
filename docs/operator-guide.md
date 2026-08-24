@@ -145,6 +145,21 @@ counted.
 If sheet 1 is printed page 49, the finished PDF shows `49 (1 of 24)` — so a
 citation to page 56 takes a reader to page 56.
 
+### When the numbering starts after the cover
+
+In many issues the cover and the contents page carry no printed number at all,
+and printed page 1 is the third sheet. Say so with the same setting:
+
+> **Sheet ⟨3⟩ is printed page ⟨1⟩**
+
+The two sheets before it are then numbered **i** and **ii**, the way a book
+numbers its front matter, and the Printed page column shows those roman numerals
+so you can see it worked. You can type `ii` back into that column just as you
+would type `14`.
+
+Do not try to give the cover a printed page of **0**. There is no page 0, and the
+program will refuse it. Front matter is what that setting is for.
+
 > **If every bookmark suddenly points past the end of the issue**, you have
 > almost certainly typed printed page numbers into the **Sheet** column. Use the
 > **Printed page** column instead. The program will usually spot this and say so.
@@ -220,6 +235,10 @@ reason, and the program warns about it when it can tell.
 Some issues set their contents page in a way the program reads poorly. Add the
 bookmarks by hand with **Add**, using the contents page. The PDF is still fully
 searchable either way.
+
+**The cover and contents page are being given printed numbers, and should not be.**
+Set **Sheet ⟨3⟩ is printed page ⟨1⟩** — or whichever sheet is really printed
+page 1. See *When the numbering starts after the cover* above.
 
 **The list looks like an old, worse result.**
 Opening an issue shows the review you saved last time. Click **Re-analyse** to
