@@ -69,6 +69,10 @@ Black entries are settled: the program found the article's heading on that page
 and is confident. **Red entries want a decision.** There are two kinds, and they
 need opposite things.
 
+The status line at the bottom of the window counts them separately — for
+example *"2 to keep or remove, 1 needs a page number"* — so you can see at a
+glance which kind of work is left.
+
 ### "This is printed here, but the contents page never listed it"
 
 The program found a heading printed on a page — a poem, a book list, the board
@@ -85,6 +89,10 @@ a photograph it cannot read. These show a **—** instead of a page number,
 because the number it has is only a placeholder.
 
 **Give it a page number**, then confirm it.
+
+These sit **at the bottom of the list**, below everything with a real page,
+because the program has no idea where they go. Do not go looking for them in
+page order.
 
 ### The buttons
 
