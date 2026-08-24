@@ -201,7 +201,11 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
         issue.bookmarks.append(
             Bookmark(title, sheet, needs_review=True, review_reason="suggested"))
 
-    issue.bookmarks.sort(key=lambda b: b.sheet)
+    # A bookmark whose sheet is only a placeholder sorts last, not by that
+    # placeholder: parked on sheet 1, it otherwise lands between the cover and
+    # the contents page and reads as though it belongs there.
+    issue.bookmarks.sort(
+        key=lambda b: (b.needs_review and b.review_reason == "unplaced", b.sheet))
 
     # Pages the contents page cites that no sheet carries. Vol 1 No 2 lists
     # articles on pages 28 and 29 which were never scanned, and without this

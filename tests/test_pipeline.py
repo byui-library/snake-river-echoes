@@ -427,3 +427,29 @@ def test_suggested_headings_are_flagged_for_review(tmp_path, make_sheet):
     suggested = [b for b in issue.bookmarks if b.title == "Board of Directors"]
     assert suggested and suggested[0].needs_review
     assert suggested[0].sheet == 3
+
+
+def test_unplaced_bookmarks_sort_after_the_ones_with_a_real_page(tmp_path, make_sheet):
+    """Sorting purely by sheet drops a title parked on sheet 1 between the
+    cover and the contents page, which reads as though it belongs there.
+    A bookmark with no known page belongs at the end, out of the way."""
+    folder = tmp_path / "issue"
+    folder.mkdir()
+    for n in range(1, 5):
+        src = make_sheet(name=f"R_{n:02d}.tif")
+        src.replace(folder / src.name)
+    cache = pipeline.cache_dir(folder)
+    cache.mkdir(parents=True)
+    (cache / "R_01.hocr").write_bytes(hocr_page([("THE QUARTERLY", (200, 300, 1400, 360))]))
+    (cache / "R_02.hocr").write_bytes(hocr_page([
+        ("CONTENTS", (200, 300, 900, 360)),
+        ("ORAL HISTORY", (200, 400, 1400, 460)),
+        ("IDAHO POETRY", (200, 500, 1400, 560))]))
+    (cache / "R_03.hocr").write_bytes(hocr_page([("ORAL HISTORY", (200, 300, 1400, 360))]))
+    (cache / "R_04.hocr").write_bytes(hocr_page([("more prose", (200, 300, 900, 360))]))
+
+    issue = pipeline.draft(folder)
+
+    titles = [b.title for b in issue.bookmarks]
+    assert titles.index("Table of Contents") < titles.index("Idaho Poetry"), titles
+    assert titles[-1] == "Idaho Poetry", titles

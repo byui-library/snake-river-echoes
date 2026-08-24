@@ -10,12 +10,9 @@ scans into a single searchable, bookmarked, page-labeled PDF.
 Built for digitizing *Snake River Echoes*, the journal of the Upper Snake River Valley
 Historical Society, but intended to be handed to other archives as an installer.
 
-**Current state: all four phases are done and verified**, including the installer on a
-pristine Windows with no Python and no Tesseract (2026-08-21).
-
-The next real unknown is whether the outline parser generalises: every heuristic in
-`core/outline.py` was tuned against Vol 1 No 1. A second issue is the highest-value
-next test.
+**Current state: released through v0.1.4 and in daily use.** The installer is verified
+on a pristine Windows with no Python and no Tesseract, and a special collections
+employee is processing real issues with it.
 
 The authoritative design is
 [docs/superpowers/specs/2026-08-20-sre-book-builder-design.md](docs/superpowers/specs/2026-08-20-sre-book-builder-design.md).
@@ -24,22 +21,31 @@ one of them — resolve it explicitly rather than silently following the code.
 
 ## Next session — start here
 
-Everything is built and verified. `py -m pytest` (185 tests) and
-`py packaging/build.py` both work from a clean checkout plus the sample scans.
+Released through v0.1.4 and in use by a special collections employee. `py -m pytest`
+(301 tests) and `py packaging/build.py` both work from a clean checkout plus the
+sample scans.
 
-**Four issues have been processed** (Vol 1 Nos 1-4, 1971-72), and each one broke
-something new in `core/outline.py` -- see the commit history. All four are pinned by
-tests built from their own real OCR, so tuning for one cannot silently cost another.
+**Everything of consequence since v0.1.0 was found by someone using the program,
+not by inspecting it.** Prefer putting a build in front of a real operator over
+another round of tuning here.
 
-The curve has not flattened. All four share a typesetter; **an issue from a different
-decade is the next real test**, and the parser should be expected to need work.
+**Six issues have been processed** (Vol 1 Nos 1-4, Vol 2 No 1, Vol 4 No 1), and each
+one taught `core/outline.py` something new -- see the commit history. Each is pinned by
+tests built from its own real OCR, so tuning for one cannot silently cost another.
 
-Also untested: **an issue containing photographs.** Vol 1 No 1 is typewritten text
-with a line-drawing cover, so the 200 DPI embed decision has never been judged
-against a halftone.
+The curve has not flattened. **An issue from a different decade is still the real
+test**, and the parser should be expected to need work.
 
-What has never needed changing across all four issues: OCR, the text layer, deskew,
-page labels, metadata and PDF assembly. The fragile part is narrow.
+Also untested: **an issue containing photographs.** The issues seen so far are
+typewritten text, so the 200 DPI embed decision has never been judged against a
+halftone.
+
+What has never needed changing across any of them: OCR, the text layer, deskew, page
+labels, metadata and PDF assembly. The fragile part is narrow -- outline detection,
+and reading the folder.
+
+**Three of five scanned issues are missing pages** (Vol 1 No 2: 27-28, Vol 1 No 4:
+95-96, Vol 2 No 1: 29). The program reports this now; the scans still need redoing.
 
 ### Verified, with evidence
 
@@ -50,6 +56,8 @@ page labels, metadata and PDF assembly. The fragile part is narrow.
 | Deskew applied to both derivatives | test, and the constraint is documented below |
 | Packaged build refuses a system Tesseract | frozen exe exits 1 on this machine, which has one installed |
 | Installer works with no dev tools | [clean-machine test](docs/superpowers/specs/2026-08-21-clean-machine-test-pass.txt), Windows Sandbox, networking off |
+| Missing pages reported by the packaged build | clean-machine test on v0.1.3 names pages 27, 28 of Vol 1 No 2 |
+| AppleDouble files ignored | packaged build reads 22 sheets from a folder of 22 scans + 22 ghosts |
 
 ## Hard constraints
 
@@ -130,7 +138,7 @@ editing a bookmark and rebuilding must never re-OCR.
 py -m srebook.cli draft "Image Files/SRE Vol 1 Number 1"    # OCR + propose outline
 py -m srebook.cli build "Image Files/SRE Vol 1 Number 1"    # after reviewing the sidecar
 py -m srebook.gui                                            # the window
-py -m pytest                                                 # 239 tests, ~20s
+py -m pytest                                                 # 301 tests, ~25s
 ```
 
 Drafting an issue takes about 80 seconds; building from cached OCR is near-instant.
@@ -209,7 +217,7 @@ Non-obvious things the spike established — read the findings doc before writin
   headings, so an article whose heading is punctuated differently from its contents entry
   earns a second, duplicate bookmark.
 
-## Phase 3+ lessons, from four real issues
+## Lessons from six real issues and an operator
 
 - **A contents page may be Title Case, not caps.** Capitalisation alone cannot then
   separate a title from the description under it, so those candidates are kept only
