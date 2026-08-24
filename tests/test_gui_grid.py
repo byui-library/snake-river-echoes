@@ -344,12 +344,14 @@ def test_a_printed_page_outside_the_issue_is_refused():
     assert g.rows[0].sheet == 1, "the row is left as it was"
 
 
-def test_front_matter_shows_no_printed_page():
+def test_front_matter_shows_the_label_the_pdf_will_carry():
+    """Front matter is labelled i, ii in the finished PDF, so that is what the
+    column shows. A dash would say "unknown", which is a different thing."""
     issue = Issue(title="SRE", body_starts_at_sheet=3, body_starts_at_printed=1,
                   bookmarks=[Bookmark("Front Cover", 1), Bookmark("Article", 3)])
     g = grid.OutlineGrid(issue, sheet_count=22)
 
-    assert g.printed_display(0) == "—"
+    assert g.printed_display(0) == "i"
     assert g.printed_display(1) == "1"
 
 
@@ -375,3 +377,47 @@ def test_an_unplaced_title_still_hides_its_placeholder_sheet():
                                    review_reason="unplaced")])
 
     assert g.sheet_display(0) == "—"
+
+
+def test_front_matter_shows_its_roman_label_not_a_dash():
+    """An operator asked whether the cover and contents could be roman. They
+    can -- setting 'sheet 3 is printed page 1' does it -- but the column showed
+    a dash, so there was nothing to tell her it had worked."""
+    issue = Issue(title="SRE", body_starts_at_sheet=3, body_starts_at_printed=1,
+                  bookmarks=[Bookmark("Front Cover", 1),
+                             Bookmark("Table of Contents", 2),
+                             Bookmark("Black Gold", 3)])
+    g = grid.OutlineGrid(issue, sheet_count=22)
+
+    assert g.printed_display(0) == "i"
+    assert g.printed_display(1) == "ii"
+    assert g.printed_display(2) == "1"
+
+
+def test_an_unplaced_bookmark_still_shows_a_dash_not_a_numeral():
+    """The dash means "no page known", which is different from "front matter"."""
+    issue = Issue(title="SRE", body_starts_at_sheet=3, body_starts_at_printed=1,
+                  bookmarks=[Bookmark("Poetry", 1, needs_review=True,
+                                      review_reason="unplaced")])
+    g = grid.OutlineGrid(issue, sheet_count=22)
+
+    assert g.printed_display(0) == "—"
+
+
+def test_a_roman_page_can_be_typed_back_in():
+    """Whatever the column shows, the operator must be able to enter it."""
+    issue = Issue(title="SRE", body_starts_at_sheet=3, body_starts_at_printed=1,
+                  bookmarks=[Bookmark("Front Cover", 5)])
+    g = grid.OutlineGrid(issue, sheet_count=22)
+
+    assert g.set_printed_text(0, "ii")
+    assert g.rows[0].sheet == 2
+
+
+def test_an_arabic_page_still_works(): 
+    issue = Issue(title="SRE", body_starts_at_sheet=3, body_starts_at_printed=1,
+                  bookmarks=[Bookmark("Article", 1)])
+    g = grid.OutlineGrid(issue, sheet_count=22)
+
+    assert g.set_printed_text(0, "6")
+    assert g.rows[0].sheet == 8

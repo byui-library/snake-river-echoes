@@ -157,6 +157,27 @@ def sheet_for_printed(issue: Issue, printed: int) -> int:
     return printed - issue.body_starts_at_printed + issue.body_starts_at_sheet
 
 
+def label_for_sheet(issue: Issue, sheet: int) -> str:
+    """The label a sheet will carry in the finished PDF: "i" or "27"."""
+    labels = page_labels(issue, sheet)
+    return labels[sheet - 1] if 1 <= sheet <= len(labels) else ""
+
+
+def sheet_for_label(issue: Issue, text: str, sheet_count: int) -> int | None:
+    """The sheet carrying a label, given either as roman or as a number.
+
+    Front matter is labelled i, ii, iii, so an operator reading the finished
+    PDF sees those and must be able to type them back.
+    """
+    wanted = text.strip().lower()
+    if not wanted:
+        return None
+    for sheet, label in enumerate(page_labels(issue, sheet_count), start=1):
+        if label.lower() == wanted:
+            return sheet
+    return None
+
+
 def printed_for_sheet(issue: Issue, sheet: int) -> int | None:
     """The printed page number on a sheet, or None if it is front matter."""
     if sheet < issue.body_starts_at_sheet:

@@ -417,12 +417,18 @@ class App(ttk.Frame):
                 "starts? This is the number the contents page gives.",
                 self.grid_model.printed_display(index).replace("—", ""))
             if value and value.isdigit():
-                if not self.grid_model.set_printed(index, int(value)):
+                if not self.grid_model.set_printed_text(index, value):
+                    labels = self.grid_model.page_label_range()
                     messagebox.showerror(
                         "SRE Book Builder",
-                        f"This issue does not have a printed page {value}.\n\n"
-                        f"It has {len(self.sheets)} sheets. Check the "
-                        "'Sheet is printed page' setting above the list.")
+                        f"This issue has no page {value}.\n\n"
+                        f"Its {len(self.sheets)} sheets are numbered "
+                        f"{labels}.\n\n"
+                        "If the cover and contents pages carry no printed "
+                        "number, set 'Sheet is printed page' above the list to "
+                        "the first sheet that does — for example sheet 3 is "
+                        "printed page 1. The sheets before it are then "
+                        "numbered i, ii, iii.")
         elif column == "#2":
             value = self._ask("Sheet number", f'Which scan does "{row.title}" start on?',
                               str(row.sheet))

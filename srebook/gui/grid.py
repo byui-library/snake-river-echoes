@@ -12,8 +12,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..core.model import (Bookmark, Issue, printed_for_sheet,
-                          save_sidecar, sheet_for_printed, validate)
+from ..core.model import (Bookmark, Issue, label_for_sheet, page_labels,
+                          printed_for_sheet,
+                          save_sidecar, sheet_for_label, sheet_for_printed,
+                          validate)
 
 MAX_LEVEL = 1  # 0 = article, 1 = a piece within a department
 UNPLACED_SHEET = "—"  # em dash: a guess, not an answer
@@ -201,8 +203,24 @@ class OutlineGrid:
         row = self.rows[index]
         if self._sheet_is_a_guess(row):
             return UNPLACED_SHEET
-        printed = printed_for_sheet(self.issue, row.sheet)
-        return UNPLACED_SHEET if printed is None else str(printed)
+        # Front matter carries a roman label, not nothing. Showing a dash there
+        # left an operator unable to tell whether asking for roman had worked.
+        return label_for_sheet(self.issue, row.sheet) or UNPLACED_SHEET
+
+    def page_label_range(self) -> str:
+        """How this issue's sheets are numbered, for an error message."""
+        labels = page_labels(self.issue, self.sheet_count)
+        if not labels:
+            return "not at all"
+        return f"{labels[0]} to {labels[-1]}"
+
+    def set_printed_text(self, index: int, text: str) -> bool:
+        """Place a row by the label printed on the page, roman or arabic."""
+        sheet = sheet_for_label(self.issue, text, self.sheet_count)
+        if sheet is None:
+            return False
+        self.edit(index, sheet=sheet)
+        return True
 
     def set_printed(self, index: int, printed: int) -> bool:
         """Place a row by the number printed on the page.
