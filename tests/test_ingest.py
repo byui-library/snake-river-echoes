@@ -121,3 +121,72 @@ def test_a_file_that_cannot_be_opened_does_not_stop_the_check(tmp_path):
     (tmp_path / "broken.tif").write_bytes(b"not a tiff at all")
 
     assert [p.name for p in ingest.find_sheets(tmp_path)] == ["broken.tif"]
+
+
+def test_apple_double_metadata_files_are_not_sheets(tmp_path):
+    """A Mac writing to a network share leaves a "._name" file beside every
+    real one. They are resource forks, not images, and the operator saw
+    "43 sheets found" for a 21-page issue followed by a read error."""
+    from PIL import Image
+    for n in range(1, 4):
+        Image.new("L", (60, 80), 255).save(tmp_path / f"SRE_Vol4_No1_{n:02d}.TIF")
+        (tmp_path / f"._SRE_Vol4_No1_{n:02d}.TIF").write_bytes(b"\x00\x05\x16\x07AppleDouble")
+
+    sheets = ingest.find_sheets(tmp_path)
+
+    assert [p.name for p in sheets] == ["SRE_Vol4_No1_01.TIF", "SRE_Vol4_No1_02.TIF",
+                                        "SRE_Vol4_No1_03.TIF"]
+
+
+def test_other_hidden_files_are_ignored_too(tmp_path):
+    from PIL import Image
+    Image.new("L", (60, 80), 255).save(tmp_path / "page_01.tif")
+    (tmp_path / ".hidden.tif").write_bytes(b"")
+
+    assert [p.name for p in ingest.find_sheets(tmp_path)] == ["page_01.tif"]
+
+
+def test_a_file_genuinely_named_with_an_underscore_is_kept(tmp_path):
+    """Only the "._" prefix is AppleDouble. A leading underscore is not."""
+    from PIL import Image
+    Image.new("L", (60, 80), 255).save(tmp_path / "_draft_01.tif")
+
+    assert [p.name for p in ingest.find_sheets(tmp_path)] == ["_draft_01.tif"]
+
+
+def test_apple_double_files_do_not_trip_the_multipage_check(tmp_path):
+    """They cannot be opened as images, and must not be mistaken for a problem
+    with the scans themselves."""
+    from PIL import Image
+    Image.new("L", (60, 80), 255).save(tmp_path / "p_01.tif")
+    (tmp_path / "._p_01.tif").write_bytes(b"\x00\x05\x16\x07not an image")
+
+    assert len(ingest.find_sheets(tmp_path)) == 1
+
+
+def test_volume_and_issue_are_read_even_without_a_year(tmp_path):
+    """Volume 4's scans are named SRE_Vol4_No1_01.TIF, with no year in the
+    name. The operator saw Volume, Issue and Year all blank, when two of the
+    three were sitting in the file name."""
+    folder = make_tifs(tmp_path, ["SRE_Vol4_No1_01.TIF", "SRE_Vol4_No1_02.TIF"])
+
+    meta = ingest.guess_metadata(ingest.find_sheets(folder))
+
+    assert (meta.volume, meta.issue) == (4, 1)
+    assert meta.year is None
+
+
+def test_a_year_is_still_read_when_it_is_there(tmp_path):
+    folder = make_tifs(tmp_path, ["SRE_1971_Vol1_No2_01.tif"])
+
+    meta = ingest.guess_metadata(ingest.find_sheets(folder))
+
+    assert (meta.year, meta.volume, meta.issue) == (1971, 1, 2)
+
+
+def test_a_year_after_the_issue_number_is_read(tmp_path):
+    folder = make_tifs(tmp_path, ["SRE_Vol2_No3_1973_01.tif"])
+
+    meta = ingest.guess_metadata(ingest.find_sheets(folder))
+
+    assert (meta.year, meta.volume, meta.issue) == (1973, 2, 3)

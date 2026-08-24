@@ -10,7 +10,7 @@
 ; Machine-wide install is still offered for IT to deploy centrally.
 
 #define AppName "SRE Book Builder"
-#define AppVersion "0.1.3"
+#define AppVersion "0.1.4"
 #define AppPublisher "Upper Snake River Valley Historical Society"
 #define AppExe "SREBookBuilder.exe"
 

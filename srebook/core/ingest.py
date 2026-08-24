@@ -11,11 +11,14 @@ from pathlib import Path
 
 TIFF_SUFFIXES = {".tif", ".tiff"}
 
-# SRE_1971_Vol1_No1_01.tif
-SRE_NAME = re.compile(
-    r"(?P<year>\d{4})[_\- ]*vol[._\- ]*(?P<volume>\d+)[_\- ]*no[._\- ]*(?P<issue>\d+)",
+# Volume and issue: "SRE_1971_Vol1_No1_01.tif", "SRE_Vol4_No1_01.TIF".
+# The year is matched separately, because Volume 4's scans do not carry one and
+# requiring it left volume and issue blank when both were in the name.
+VOL_ISSUE = re.compile(
+    r"vol(?:ume)?[._\- ]*(?P<volume>\d+)[._\- ]*no?(?:\.|[._\- ])*(?P<issue>\d+)",
     re.IGNORECASE,
 )
+YEAR = re.compile(r"(?<!\d)(?P<year>1[5-9]\d{2}|20\d{2})(?!\d)")
 
 MIN_YEAR, MAX_YEAR = 1800, 2100
 
@@ -29,6 +32,18 @@ class IssueMetadata:
     year: int | None = None
     volume: int | None = None
     issue: int | None = None
+
+
+def _is_metadata_file(path: Path) -> bool:
+    """A companion file the operating system left behind, not a page scan.
+
+    A Mac writing to a network share or a USB drive leaves an AppleDouble file,
+    "._SRE_Vol4_No1_01.TIF", beside every real one. They hold resource-fork
+    metadata, not an image. Counting them doubled the sheet count on scans from
+    the archive's capture station and then failed to open the first one, which
+    reads as a problem with the scans rather than with the folder.
+    """
+    return path.name.startswith("._") or path.name.startswith(".")
 
 
 def _natural_key(path: Path):
@@ -50,6 +65,7 @@ def find_sheets(folder: Path) -> list[Path]:
     sheets = [
         p for p in folder.iterdir()
         if p.is_file() and p.suffix.lower() in TIFF_SUFFIXES
+        and not _is_metadata_file(p)
     ]
     sheets = sorted(sheets, key=_natural_key)
     _refuse_multipage(sheets)
@@ -89,15 +105,21 @@ def guess_metadata(sheets: list[Path]) -> IssueMetadata:
     than a blank field.
     """
     for path in sheets:
-        m = SRE_NAME.search(path.stem)
+        stem = path.stem
+        m = VOL_ISSUE.search(stem)
         if not m:
             continue
-        year = int(m.group("year"))
-        if not MIN_YEAR <= year <= MAX_YEAR:
-            continue
-        return IssueMetadata(
-            year=year,
-            volume=int(m.group("volume")),
-            issue=int(m.group("issue")),
-        )
+
+        # A year is welcome but not required, and it may sit either side of the
+        # volume and issue.
+        year = None
+        for candidate in YEAR.finditer(stem):
+            value = int(candidate.group("year"))
+            if MIN_YEAR <= value <= MAX_YEAR:
+                year = value
+                break
+
+        return IssueMetadata(year=year,
+                             volume=int(m.group("volume")),
+                             issue=int(m.group("issue")))
     return IssueMetadata()

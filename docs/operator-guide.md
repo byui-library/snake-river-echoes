@@ -196,6 +196,10 @@ The PDF opens showing the bookmark list. Readers can search it with Ctrl-F.
 **"There are no page scans (.tif) in ..."**
 The folder has no TIFFs, or you picked the folder above the right one.
 
+**"Could not read the scan ._SOMETHING.TIF"**
+You are on a version before 0.1.4. Those "._" files are left behind by Macs
+writing to a shared drive; they are not scans. Update, and they are ignored.
+
 **"... holds 24 pages in one file."**
 The scans are one big TIFF rather than one file per page. Split it and try
 again — the program needs a file per page so it can bookmark and number them.
