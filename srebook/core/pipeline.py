@@ -281,6 +281,9 @@ def build(folder: Path, progress: Progress | None = None,
     issue = load_sidecar(side)
     if force:
         _clear_review_flags(issue.bookmarks)
+        # Unattended means nobody is there to answer the gap either. The
+        # missing pages stay recorded in the sidecar and out of the PDF.
+        issue.gap_acknowledged = True
     pages = _ocr_sheets(sheets, folder, issue.embed_dpi, progress)
 
     try:

@@ -36,8 +36,18 @@ def _describe_draft(issue: Issue, folder: Path) -> None:
 
     # Two different problems needing opposite advice: one wants a page number,
     # the other wants a yes or no.
+    waiting = [(b.title, b.missing_page) for b in issue.bookmarks
+               if b.needs_review and b.review_reason == "missing"]
+    if waiting:
+        print("\n  These start on pages that are not in this scan. They stay in")
+        print("  the review and are left out of the PDF until those pages are")
+        print("  scanned:")
+        for title, page in waiting:
+            print(f"      printed page {page:>3}  {title}")
+
     unplaced = [b.title for b in issue.bookmarks
-                if b.needs_review and b.review_reason != "suggested"]
+                if b.needs_review
+                and b.review_reason not in ("suggested", "missing")]
     if unplaced:
         print("\n  These could not be located in the body, so their sheet is a guess.")
         print("  Give them a page number before building:")
