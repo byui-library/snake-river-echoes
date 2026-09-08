@@ -280,7 +280,9 @@ def validate(issue: Issue, sheet_count: int) -> list[str]:
                     f'Bookmark "{b.title}" points at sheet {b.sheet}, '
                     f"but this issue has {sheet_count} sheets."
                 )
-            if b.needs_review and b.review_reason == "suggested":
+            if b.needs_review and b.review_reason == "missing":
+                pass    # nothing to fix: the page is not in the scan
+            elif b.needs_review and b.review_reason == "suggested":
                 problems.append(
                     f'"{b.title}" is printed on sheet {b.sheet} but is not '
                     "listed on the contents page. Confirm it to keep it as a "
@@ -300,4 +302,16 @@ def validate(issue: Issue, sheet_count: int) -> list[str]:
             check(b.children, depth + 1)
 
     check(issue.bookmarks, 1)
+
+    # Said last so it is the line left in the eye. Publishing a book that is
+    # quietly short of two pages is the failure this whole check exists to
+    # prevent, so it is stated once and must be answered before building.
+    if issue.missing_pages and not issue.gap_acknowledged:
+        pages = ", ".join(str(p) for p in issue.missing_pages)
+        problems.append(
+            f"Printed page(s) {pages} are not in this scan. Check the issue "
+            "against the paper copy: either those pages were missed at the "
+            "scanner, or the page numbers above are wrong. Correct the list, "
+            "or accept it, before building."
+        )
     return problems

@@ -387,3 +387,37 @@ def test_an_ordinary_bookmark_records_no_missing_page(tmp_path):
     save_sidecar(Issue(bookmarks=[Bookmark("Front Cover", 1)]), path)
 
     assert "missing_page" not in path.read_text(encoding="utf-8")
+
+
+def test_a_missing_bookmark_is_a_statement_not_a_fault():
+    """There is no sheet to point it at, so demanding one would make the
+    issue unbuildable until someone rescans."""
+    issue = Issue(missing_pages=[28, 29], gap_acknowledged=True, bookmarks=[
+        Bookmark("The Battle of Pierre's Hole", 1,
+                 needs_review=True, review_reason="missing", missing_page=28)])
+
+    assert validate(issue, sheet_count=20) == []
+
+
+def test_an_unacknowledged_gap_stops_the_build():
+    issue = Issue(missing_pages=[28, 29])
+
+    problems = validate(issue, sheet_count=20)
+
+    assert any("28, 29" in p for p in problems), problems
+
+
+def test_an_acknowledged_gap_does_not_stop_the_build():
+    issue = Issue(missing_pages=[28, 29], gap_acknowledged=True)
+
+    assert validate(issue, sheet_count=20) == []
+
+
+def test_an_unplaced_bookmark_still_stops_the_build():
+    """Only a missing page is excused. A title the parser could not find is
+    still the operator's to place."""
+    issue = Issue(bookmarks=[
+        Bookmark("Community History", 1, needs_review=True,
+                 review_reason="unplaced")])
+
+    assert validate(issue, sheet_count=20) != []
