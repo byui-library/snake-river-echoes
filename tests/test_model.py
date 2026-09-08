@@ -292,3 +292,40 @@ def test_a_reviewed_bookmark_carries_no_reason(tmp_path):
     save_sidecar(an_issue(bookmarks=[Bookmark("Cover", 1)]), path)
 
     assert "review_reason" not in json.loads(path.read_text(encoding="utf-8"))["bookmarks"][0]
+
+
+# --------------------------------------------------- a gap in the scan ----
+# Vol 1 No 2 prints 25 on its cover and 27 on sheet 3, then jumps to 30:
+# pages 28 and 29 were never scanned. A single printed = sheet + offset
+# mapping cannot describe that, and calling the cover 27 sends someone to
+# rescan the wrong pages.
+
+def test_page_labels_skip_a_gap_in_the_scan():
+    issue = Issue(body_starts_at_sheet=1, body_starts_at_printed=25,
+                  missing_pages=[28, 29])
+
+    labels = page_labels(issue, 20)
+
+    assert labels[:5] == ["25", "26", "27", "30", "31"]
+    assert labels[-1] == "46"
+
+
+def test_page_labels_are_linear_when_nothing_is_missing():
+    """The three issues that work today must not move."""
+    issue = Issue(body_starts_at_sheet=1, body_starts_at_printed=49)
+
+    assert page_labels(issue, 24) == [str(n) for n in range(49, 73)]
+
+
+def test_a_gap_does_not_shift_the_roman_front_matter():
+    issue = Issue(body_starts_at_sheet=3, body_starts_at_printed=1,
+                  missing_pages=[2])
+
+    assert page_labels(issue, 5) == ["i", "ii", "1", "3", "4"]
+
+
+def test_a_missing_page_beyond_the_last_sheet_changes_nothing():
+    issue = Issue(body_starts_at_sheet=1, body_starts_at_printed=25,
+                  missing_pages=[99])
+
+    assert page_labels(issue, 4) == ["25", "26", "27", "28"]

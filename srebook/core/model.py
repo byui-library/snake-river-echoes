@@ -141,14 +141,23 @@ def page_labels(issue: Issue, sheet_count: int) -> list[str]:
 
     Front matter is lowercase roman; the body is decimal starting at the number
     the printer put on the page.
+
+    A page the scan does not contain is stepped over rather than counted, so
+    the numbers keep matching the ones printed on the paper. Vol 1 No 2 prints
+    27 on sheet 3 and 30 on sheet 4 because pages 28 and 29 were never scanned.
+    With nothing missing this is exactly printed = sheet + offset.
     """
+    missing = set(issue.missing_pages)
     labels = []
+    printed = issue.body_starts_at_printed
     for sheet in range(1, sheet_count + 1):
         if sheet < issue.body_starts_at_sheet:
             labels.append(_roman(sheet))
-        else:
-            offset = sheet - issue.body_starts_at_sheet
-            labels.append(str(issue.body_starts_at_printed + offset))
+            continue
+        while printed in missing:
+            printed += 1
+        labels.append(str(printed))
+        printed += 1
     return labels
 
 
