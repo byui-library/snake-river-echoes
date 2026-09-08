@@ -27,6 +27,10 @@ class Bookmark:
     # listed on the contents page, so the sheet is right and the question is
     # whether it belongs in the outline at all.
     review_reason: str = ""
+    # For "missing": the printed page the contents page cites for this entry,
+    # which no sheet in the scan carries. Kept so the bookmark can say where it
+    # belongs, and so it lands correctly once the page is scanned.
+    missing_page: int | None = None
 
     def to_dict(self) -> dict:
         d: dict = {"title": self.title, "sheet": self.sheet}
@@ -34,6 +38,8 @@ class Bookmark:
             d["needs_review"] = True
             if self.review_reason:
                 d["review_reason"] = self.review_reason
+        if self.missing_page is not None:
+            d["missing_page"] = self.missing_page
         if self.children:
             d["children"] = [c.to_dict() for c in self.children]
         return d
@@ -46,6 +52,7 @@ class Bookmark:
             children=[cls.from_dict(c) for c in d.get("children", [])],
             needs_review=d.get("needs_review", False),
             review_reason=d.get("review_reason", ""),
+            missing_page=d.get("missing_page"),
         )
 
 

@@ -659,42 +659,32 @@ def test_a_page_range_cites_both_ends():
         == [36, 37]
 
 
-def test_pages_the_scan_does_not_contain_are_reported():
-    """Vol 1 No 2's contents cites pages 27 and 28, but every folio printed in
-    the issue follows printed = sheet + 26, so 28 and 29 are in no scan at all.
-    Two pages were missed at the scanner, and two articles went with them."""
-    missing = outline.missing_pages(cited=[27, 28, 30, 31, 46],
-                                    folios={4: 30, 5: 31, 6: 32},
-                                    sheet_count=20, first_body_sheet=3)
+def test_a_page_the_contents_cites_but_no_sheet_carries_is_reported():
+    """Vol 1 No 4's contents cites 95 and 96; the issue ends at 94, so those
+    two pages were missed at the scanner."""
+    labels = [str(n) for n in range(73, 95)]
 
-    assert missing == [27, 28]
+    assert outline.pages_not_in_scan([75, 88, 94, 95, 96], labels) == [95, 96]
 
 
-def test_nothing_is_reported_when_the_scan_is_complete():
-    missing = outline.missing_pages(cited=[3, 4, 7], folios={4: 4, 6: 6},
-                                    sheet_count=22, first_body_sheet=3)
+def test_nothing_is_reported_when_every_cited_page_has_a_sheet():
+    labels = [str(n) for n in range(49, 73)]
 
-    assert missing == []
-
-
-def test_a_misread_folio_does_not_silence_the_missing_page_check():
-    """Real folios include OCR slips -- 40 read as 49, 45 as 47. Demanding that
-    every folio agree meant the check gave up exactly where it was needed."""
-    folios = {4: 30, 5: 31, 6: 32, 7: 33, 14: 49, 19: 47}   # two misreads
-
-    missing = outline.missing_pages(cited=[27, 28, 30, 31], folios=folios,
-                                    sheet_count=20, first_body_sheet=3)
-
-    assert missing == [27, 28]
+    assert outline.pages_not_in_scan([51, 56, 72], labels) == []
 
 
-def test_folios_too_scattered_to_agree_report_nothing():
-    """If no offset commands a majority, the scan is not understood well enough
-    to accuse it of missing pages."""
-    missing = outline.missing_pages(cited=[27, 28], folios={4: 30, 6: 40},
-                                    sheet_count=20, first_body_sheet=3)
+def test_a_page_inside_a_gap_is_reported():
+    """Vol 1 No 2 carries 25, 26, 27 then 30 onward. Page 28 is cited and is
+    on no sheet."""
+    labels = ["25", "26", "27"] + [str(n) for n in range(30, 47)]
 
-    assert missing == []
+    assert outline.pages_not_in_scan([27, 28, 30, 46], labels) == [28]
+
+
+def test_roman_front_matter_is_not_mistaken_for_a_missing_page():
+    labels = ["i", "ii"] + [str(n) for n in range(1, 21)]
+
+    assert outline.pages_not_in_scan([1, 20], labels) == []
 
 
 # ------------------------------------------------ folios at the foot ----
@@ -753,3 +743,35 @@ def test_the_anchor_counts_back_from_the_earliest_folio_not_through_a_gap():
 
 def test_one_folio_alone_is_still_coincidence():
     assert outline.detect_body_start({4: ["30"]}) is None
+
+
+# ------------------------------------------- which page an entry cites ----
+
+CONTENTS_NO2 = [
+    "CONTENTS",
+    "EASTERN IDAHO REVISITED!",
+    "The Editor describes the early history of the area covered by the",
+    "Historical Society 27",
+    "THE BALTLE OF PIERRE'S HOLE",
+    "By Wendell Gillette. The story of this historic battle between the",
+    "Blackfeet Indians and trappers. Written by one who resides in the",
+    "Valley, : __ 28",
+    "ANNUAL FALL PUBLIC MEETING ANNOUNCEMENT 30",
+]
+
+
+def test_the_page_an_entry_cites_may_be_lines_below_its_title():
+    assert outline.cited_page_for(CONTENTS_NO2, "THE BALTLE OF PIERRE'S HOLE") == 28
+
+
+def test_the_page_may_sit_on_the_title_line_itself():
+    assert outline.cited_page_for(
+        CONTENTS_NO2, "ANNUAL FALL PUBLIC MEETING ANNOUNCEMENT") == 30
+
+
+def test_the_first_entry_takes_the_first_number_after_it():
+    assert outline.cited_page_for(CONTENTS_NO2, "EASTERN IDAHO REVISITED!") == 27
+
+
+def test_a_title_the_contents_page_does_not_list_cites_nothing():
+    assert outline.cited_page_for(CONTENTS_NO2, "IDAHO POETRY") is None

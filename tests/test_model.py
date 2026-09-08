@@ -368,3 +368,22 @@ def test_an_older_sidecar_has_not_acknowledged_anything(tmp_path):
     path.write_text('{"title": "SRE", "missing_pages": [28]}', encoding="utf-8")
 
     assert load_sidecar(path).gap_acknowledged is False
+
+
+def test_a_bookmark_remembers_the_page_that_was_never_scanned(tmp_path):
+    """It waits in the saved review until the page is rescanned."""
+    path = tmp_path / "i.json"
+    save_sidecar(Issue(bookmarks=[
+        Bookmark("The Battle of Pierre's Hole", 1, needs_review=True,
+                 review_reason="missing", missing_page=28)]), path)
+
+    kept = load_sidecar(path).bookmarks[0]
+
+    assert (kept.review_reason, kept.missing_page) == ("missing", 28)
+
+
+def test_an_ordinary_bookmark_records_no_missing_page(tmp_path):
+    path = tmp_path / "i.json"
+    save_sidecar(Issue(bookmarks=[Bookmark("Front Cover", 1)]), path)
+
+    assert "missing_page" not in path.read_text(encoding="utf-8")

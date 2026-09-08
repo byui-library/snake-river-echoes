@@ -459,6 +459,39 @@ def cited_pages(lines: list[str]) -> list[int]:
     return pages
 
 
+CITED_PAGE_WINDOW = 5   # lines of description between an entry and its number
+
+
+def cited_page_for(lines: list[str], title: str) -> int | None:
+    """The page the contents page quotes for one entry, or None.
+
+    The number rarely sits on the title's own line. A contents entry here runs
+    to several lines of description, and the page follows the last of them:
+    "THE BALTLE OF PIERRE'S HOLE" is three lines above its 28. Needed so a
+    bookmark can be told apart from its neighbours when its page turns out to
+    be one the scan does not contain.
+    """
+    def flatten(text: str) -> str:
+        # A short entry prints its page on the title's own line, after the
+        # leader: "ANNUAL FALL PUBLIC MEETING ANNOUNCEMENT 30".
+        without_page = re.sub(r"[\s.,:;_·-]*\d{1,4}(?:\s*[-,]\s*\d{1,4})*\s*$",
+                              "", text)
+        return " ".join(without_page.split()).casefold()
+
+    wanted = flatten(title)
+    if not wanted:
+        return None
+    for index, raw in enumerate(lines):
+        if flatten(raw) != wanted:
+            continue
+        for follower in lines[index:index + CITED_PAGE_WINDOW]:
+            pages = cited_pages([follower])
+            if pages:
+                return pages[0]
+        return None
+    return None
+
+
 FOLIO_MAX_GAP = 20      # a plausible run of pages missed at the scanner
 
 
@@ -530,28 +563,20 @@ def detect_gaps(folios: dict[int, int]) -> list[int]:
     return gaps
 
 
-def missing_pages(cited: list[int], folios: dict[int, int],
-                  sheet_count: int, first_body_sheet: int) -> list[int]:
-    """Pages the contents page cites that no body sheet in this scan carries.
+def pages_not_in_scan(cited: list[int], labels: list[str]) -> list[int]:
+    """Pages the contents page cites that no sheet in this scan carries.
 
-    Vol 1 No 2 cites pages 27 and 28, yet every folio printed in it follows
-    printed = sheet + 26, which puts those two on the cover and the contents
-    page. They are not there: two pages were missed at the scanner, and two
-    articles went with them. Silence about that leaves an archivist hunting for
-    articles that were never scanned.
+    Compared against the labels the sheets actually end up with, rather than
+    against an offset measured separately. The earlier version tallied its own
+    offset from the folios, which on Vol 1 No 2 was the post-gap one: it read
+    the cover as page 27 and so reported 27 and 28 missing when the pages
+    absent are 28 and 29.
+
+    This catches pages missing from the end of an issue, where no following
+    folio exists to reveal a jump; `detect_gaps` catches a hole in the middle.
     """
-    if not folios:
-        return []
-    # Real folios include OCR slips -- 40 read as 49, 45 as 47. Demanding that
-    # every folio agree made the check give up exactly where it was needed, so
-    # take the offset most of them support.
-    tally = Counter(sheet - printed for sheet, printed in folios.items())
-    offset, agreeing = tally.most_common(1)[0]
-    if agreeing < 2 or agreeing <= len(folios) / 2:
-        return []                    # no offset commands a majority
-
-    return sorted({p for p in cited
-                   if not first_body_sheet <= p + offset <= sheet_count})
+    carried = {int(label) for label in labels if label.isdigit()}
+    return sorted({page for page in cited if page not in carried})
 
 
 def detect_body_start(sheets: dict[int, list[str]]) -> tuple[int, int] | None:

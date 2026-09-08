@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import assemble, ingest, ocr, outline, prepare
-from .model import Bookmark, Issue, load_sidecar, save_sidecar
+from .model import Bookmark, Issue, load_sidecar, page_labels, save_sidecar
 
 Progress = Callable[[int, int, str], None]
 
@@ -210,14 +210,47 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
     # Pages the contents page cites that no sheet carries. Vol 1 No 2 lists
     # articles on pages 28 and 29 which were never scanned, and without this
     # the only sign was two bookmarks the parser could not place.
+    # Two sources, because they see different gaps. The folios catch a hole in
+    # the middle of an issue -- Vol 1 No 2's sheet 3 prints 27 and sheet 4
+    # prints 30 -- while the contents citations catch pages missing off the
+    # end, where there is no following folio to reveal a jump.
+    # Order matters. The folio gaps decide the labels, and the labels decide
+    # which cited pages are absent -- doing it the other way round measures an
+    # offset across the hole and reports the wrong pages.
     folios = outline.printed_folios(body)
-    issue.missing_pages = outline.missing_pages(
-        cited=outline.cited_pages(front_matter), folios=folios,
-        sheet_count=len(sheets), first_body_sheet=contents_sheet + 1)
+    issue.missing_pages = outline.detect_gaps(folios)
+    issue.missing_pages = sorted(set(issue.missing_pages) | set(
+        outline.pages_not_in_scan(outline.cited_pages(front_matter),
+                                  page_labels(issue, len(sheets)))))
+
+    # An entry the parser could not place, whose page the scan does not
+    # contain, is not the operator's to fix: there is nothing to point it at
+    # until someone rescans. Say so, and remember which page it wants.
+    _flag_bookmarks_on_missing_pages(issue, front_matter)
 
     output_dir(folder).mkdir(parents=True, exist_ok=True)
     save_sidecar(issue, existing)
     return issue
+
+
+def _flag_bookmarks_on_missing_pages(issue: Issue, contents_lines: list[str]) -> None:
+    """Tell apart "I could not find this" from "this page was never scanned".
+
+    The two need opposite things from the operator. An unplaced title wants a
+    page number; a title whose page is absent wants nothing at all until the
+    scanner runs again, and asking for a sheet it cannot have is what would
+    make the issue unbuildable.
+    """
+    missing = set(issue.missing_pages)
+    if not missing:
+        return
+    for bookmark in issue.bookmarks:
+        if not (bookmark.needs_review and bookmark.review_reason == "unplaced"):
+            continue
+        page = outline.cited_page_for(contents_lines, bookmark.title)
+        if page in missing:
+            bookmark.review_reason = "missing"
+            bookmark.missing_page = page
 
 
 def _clear_review_flags(bookmarks) -> None:
