@@ -510,6 +510,26 @@ def printed_folios(sheets: dict[int, list[str]]) -> dict[int, int]:
     return dict(sorted(folios.items()))
 
 
+def detect_gaps(folios: dict[int, int]) -> list[int]:
+    """Printed pages the scan skips, read from the pages themselves.
+
+    Two sheets that sit next to each other in the scan should print numbers
+    that sit next to each other on paper. Where they do not, the numbers in
+    between were never scanned: Vol 1 No 2's sheet 3 prints 27 and sheet 4
+    prints 30, so 28 and 29 are absent.
+
+    Only adjacent sheets are compared. Most sheets print no folio at all, and
+    reading a jump across a run of unnumbered sheets would invent a gap that
+    is not there.
+    """
+    gaps: list[int] = []
+    for sheet, folio in sorted(folios.items()):
+        following = folios.get(sheet + 1)
+        if following is not None and following > folio + 1:
+            gaps.extend(range(folio + 1, following))
+    return gaps
+
+
 def missing_pages(cited: list[int], folios: dict[int, int],
                   sheet_count: int, first_body_sheet: int) -> list[int]:
     """Pages the contents page cites that no body sheet in this scan carries.

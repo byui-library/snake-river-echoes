@@ -723,3 +723,21 @@ def test_a_sheet_whose_only_number_agrees_with_nothing_contributes_none():
     body = {4: ["30"], 5: ["31"], 6: ["1883"]}
 
     assert outline.printed_folios(body) == {4: 30, 5: 31}
+
+
+def test_a_jump_between_adjacent_folios_names_the_pages_that_are_not_there():
+    """Vol 1 No 2: sheet 3 prints 27 and sheet 4 prints 30."""
+    assert outline.detect_gaps({3: 27, 4: 30, 5: 31}) == [28, 29]
+
+
+def test_consecutive_folios_leave_no_gap():
+    assert outline.detect_gaps({4: 52, 5: 53, 6: 54}) == []
+
+
+def test_folios_from_non_adjacent_sheets_do_not_invent_a_gap():
+    """Sheets 5 to 7 simply print no folio; nothing is missing."""
+    assert outline.detect_gaps({4: 30, 8: 34}) == []
+
+
+def test_a_gap_needs_two_folios_to_be_seen():
+    assert outline.detect_gaps({4: 30}) == []
