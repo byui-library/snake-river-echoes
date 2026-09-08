@@ -258,7 +258,9 @@ class OutlineGrid:
         what put an entire issue's bookmarks past the end of the book.
         """
         sheet = sheet_for_printed(self.issue, printed)
-        if not 1 <= sheet <= self.sheet_count:
+        # None means no sheet carries that page -- it was never scanned, or it
+        # falls before this issue starts.
+        if sheet is None or not 1 <= sheet <= self.sheet_count:
             return False
         self.edit(index, sheet=sheet)
         return True

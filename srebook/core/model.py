@@ -161,9 +161,23 @@ def page_labels(issue: Issue, sheet_count: int) -> list[str]:
     return labels
 
 
-def sheet_for_printed(issue: Issue, printed: int) -> int:
-    """Which sheet carries a given printed page number."""
-    return printed - issue.body_starts_at_printed + issue.body_starts_at_sheet
+def sheet_for_printed(issue: Issue, printed: int) -> int | None:
+    """Which sheet carries a given printed page number, or None if none does.
+
+    None means the page is not in this scan: either it was never scanned, or
+    it falls before the issue begins. Arithmetic cannot answer this once a gap
+    exists, so it counts along the same walk `page_labels` uses.
+    """
+    missing = set(issue.missing_pages)
+    if printed in missing:
+        return None
+    sheet, current = issue.body_starts_at_sheet, issue.body_starts_at_printed
+    while current < printed:
+        current += 1
+        while current in missing:
+            current += 1
+        sheet += 1
+    return sheet if current == printed else None
 
 
 def label_for_sheet(issue: Issue, sheet: int) -> str:
@@ -189,9 +203,9 @@ def sheet_for_label(issue: Issue, text: str, sheet_count: int) -> int | None:
 
 def printed_for_sheet(issue: Issue, sheet: int) -> int | None:
     """The printed page number on a sheet, or None if it is front matter."""
-    if sheet < issue.body_starts_at_sheet:
+    if sheet < issue.body_starts_at_sheet or sheet < 1:
         return None
-    return issue.body_starts_at_printed + (sheet - issue.body_starts_at_sheet)
+    return int(page_labels(issue, sheet)[sheet - 1])
 
 
 # -------------------------------------------------------------- validation ----
@@ -215,7 +229,11 @@ def _all_look_like_printed_pages(issue: Issue, sheet_count: int) -> bool:
     beyond = [b for b in marks if b.sheet > sheet_count]
     if len(beyond) < 2:
         return False
-    return all(1 <= sheet_for_printed(issue, b.sheet) <= sheet_count for b in beyond)
+    def lands_on_a_real_sheet(bookmark) -> bool:
+        sheet = sheet_for_printed(issue, bookmark.sheet)
+        return sheet is not None and 1 <= sheet <= sheet_count
+
+    return all(lands_on_a_real_sheet(b) for b in beyond)
 
 
 def validate(issue: Issue, sheet_count: int) -> list[str]:

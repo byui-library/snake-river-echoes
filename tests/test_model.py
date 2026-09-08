@@ -329,3 +329,27 @@ def test_a_missing_page_beyond_the_last_sheet_changes_nothing():
                   missing_pages=[99])
 
     assert page_labels(issue, 4) == ["25", "26", "27", "28"]
+
+
+def test_sheet_for_printed_crosses_a_gap():
+    issue = Issue(body_starts_at_sheet=1, body_starts_at_printed=25,
+                  missing_pages=[28, 29])
+
+    assert sheet_for_printed(issue, 27) == 3
+    assert sheet_for_printed(issue, 30) == 4
+    assert sheet_for_printed(issue, 46) == 20
+
+
+def test_a_page_that_was_never_scanned_has_no_sheet():
+    issue = Issue(body_starts_at_sheet=1, body_starts_at_printed=25,
+                  missing_pages=[28, 29])
+
+    assert sheet_for_printed(issue, 28) is None
+
+
+def test_printed_for_sheet_crosses_a_gap():
+    issue = Issue(body_starts_at_sheet=1, body_starts_at_printed=25,
+                  missing_pages=[28, 29])
+
+    assert printed_for_sheet(issue, 3) == 27
+    assert printed_for_sheet(issue, 4) == 30
