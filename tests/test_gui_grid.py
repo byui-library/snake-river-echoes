@@ -414,10 +414,87 @@ def test_a_roman_page_can_be_typed_back_in():
     assert g.rows[0].sheet == 2
 
 
-def test_an_arabic_page_still_works(): 
+def test_an_arabic_page_still_works():
     issue = Issue(title="SRE", body_starts_at_sheet=3, body_starts_at_printed=1,
                   bookmarks=[Bookmark("Article", 1)])
     g = grid.OutlineGrid(issue, sheet_count=22)
 
     assert g.set_printed_text(0, "6")
     assert g.rows[0].sheet == 8
+
+
+# ------------------------------------------------ changing the mapping ----
+# The operator types a starting printed page and expects every row to move
+# with it. Vol 1 No 2 detected its cover as printed page 27 when the page
+# itself prints 25, and correcting the field appeared to do nothing at all.
+
+def test_setting_a_new_starting_page_moves_every_row():
+    g = a_paginated_grid([Bookmark("Front Cover", 1), Bookmark("Article", 3),
+                          Bookmark("Board", 24)])
+    assert [g.printed_display(i) for i in range(3)] == ["25", "27", "48"]
+
+    assert g.set_page_labels("1", "23")
+
+    assert [g.printed_display(i) for i in range(3)] == ["23", "25", "46"]
+
+
+def test_setting_a_new_starting_page_updates_the_range():
+    g = a_paginated_grid([Bookmark("Front Cover", 1)])
+
+    g.set_page_labels("1", "23")
+
+    assert g.page_label_range() == "23 to 46"
+
+
+def test_moving_the_anchor_sheet_makes_the_front_matter_roman():
+    g = a_paginated_grid([Bookmark("Front Cover", 1), Bookmark("Contents", 2),
+                          Bookmark("Article", 3)])
+
+    assert g.set_page_labels("3", "1")
+
+    assert [g.printed_display(i) for i in range(3)] == ["i", "ii", "1"]
+
+
+def test_a_half_typed_field_leaves_the_mapping_alone():
+    """She clears the box before typing the new number. Reading that as a
+    change would blank the whole column mid-keystroke."""
+    g = a_paginated_grid([Bookmark("Front Cover", 1)])
+
+    assert not g.set_page_labels("1", "")
+    assert not g.set_page_labels("", "25")
+    assert not g.set_page_labels("1", "twenty")
+
+    assert g.printed_display(0) == "25"
+
+
+def test_there_is_no_printed_page_zero():
+    g = a_paginated_grid([Bookmark("Front Cover", 1)])
+
+    assert not g.set_page_labels("1", "0")
+    assert not g.set_page_labels("0", "25")
+
+    assert g.printed_display(0) == "25"
+
+
+def test_an_anchor_past_the_last_sheet_is_refused():
+    g = a_paginated_grid([Bookmark("Front Cover", 1)])
+
+    assert not g.set_page_labels("25", "1")
+
+    assert g.printed_display(0) == "25"
+
+
+def test_setting_the_same_mapping_again_reports_no_change():
+    """The widget layer redraws on a change; saying yes every keystroke would
+    fight the operator's cursor."""
+    g = a_paginated_grid([Bookmark("Front Cover", 1)])
+
+    assert not g.set_page_labels("1", "25")
+
+
+def test_changing_the_mapping_marks_the_issue_unsaved():
+    g = a_paginated_grid([Bookmark("Front Cover", 1)])
+
+    g.set_page_labels("1", "23")
+
+    assert g.dirty

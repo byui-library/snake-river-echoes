@@ -22,7 +22,7 @@ one of them — resolve it explicitly rather than silently following the code.
 ## Next session — start here
 
 Released through v0.1.6 and in use by a special collections employee. `py -m pytest`
-(306 tests) and `py packaging/build.py` both work from a clean checkout plus the
+(318 tests) and `py packaging/build.py` both work from a clean checkout plus the
 sample scans.
 
 **Everything of consequence since v0.1.0 was found by someone using the program,
@@ -44,7 +44,7 @@ What has never needed changing across any of them: OCR, the text layer, deskew, 
 labels, metadata and PDF assembly. The fragile part is narrow -- outline detection,
 and reading the folder.
 
-**Three of five scanned issues are missing pages** (Vol 1 No 2: 27-28, Vol 1 No 4:
+**Three of five scanned issues are missing pages** (Vol 1 No 2: 28-29, Vol 1 No 4:
 95-96, Vol 2 No 1: 29). The program reports this now; the scans still need redoing.
 
 ### Verified, with evidence
@@ -56,7 +56,7 @@ and reading the folder.
 | Deskew applied to both derivatives | test, and the constraint is documented below |
 | Packaged build refuses a system Tesseract | frozen exe exits 1 on this machine, which has one installed |
 | Installer works with no dev tools | [clean-machine test](docs/superpowers/specs/2026-08-21-clean-machine-test-pass.txt), Windows Sandbox, networking off |
-| Missing pages reported by the packaged build | clean-machine test on v0.1.6 names pages 27, 28 of Vol 1 No 2 |
+| Missing pages reported by the packaged build | clean-machine test on v0.1.6 names two pages of Vol 1 No 2 (it says 27, 28; the truth is 28, 29 — see the gap lesson below) |
 | AppleDouble files ignored | packaged build reads 22 sheets from a folder of 22 scans + 22 ghosts |
 
 ## Hard constraints
@@ -138,7 +138,7 @@ editing a bookmark and rebuilding must never re-OCR.
 py -m srebook.cli draft "Image Files/SRE Vol 1 Number 1"    # OCR + propose outline
 py -m srebook.cli build "Image Files/SRE Vol 1 Number 1"    # after reviewing the sidecar
 py -m srebook.gui                                            # the window
-py -m pytest                                                 # 301 tests, ~25s
+py -m pytest                                                 # 318 tests, ~25s
 ```
 
 Drafting an issue takes about 80 seconds; building from cached OCR is near-instant.
@@ -170,8 +170,22 @@ Then double-click `dist/clean-test.wsb` to run the whole thing in Windows Sandbo
 - Tesseract, PyInstaller and Inno Setup are installed. Ghostscript and ImageMagick are
   not, and must stay that way. Note that `convert` on PATH is Windows' filesystem tool,
   not ImageMagick. ISCC lives at `~/AppData/Local/Programs/Inno Setup 6/ISCC.exe`.
-- Sample data lives in `Image Files/SRE Vol 1 Number 1/` — 22 TIFFs, 300 DPI grayscale
-  LZW, ~103 MB. Untracked. Do not assume a clone has it.
+- **Sample data lives in `Image Files/`, and it is four whole issues, not one.** This is
+  the reproduction corpus — check a reported bug against it before asking for scans.
+  Untracked (see `.gitignore`), 300 DPI grayscale LZW; do not assume a clone has it.
+
+  | Folder | Sheets | Printed pages | Notes |
+  |---|---|---|---|
+  | `SRE Vol 1 Number 1` | 22 | 1–22 | sheet 1 is printed page 1, so it cannot show a page-label bug |
+  | `SRE Vol 1 Number 2` | 20 | 25–46 | **missing pages 28, 29** — also the gap-check fixture. The program reports 27, 28 and labels the cover 27; both are wrong, see below |
+  | `SRE Vol 1 Number 3` | 24 | 49–72 | |
+  | `SRE Vol 1 Number 4` | 22 | 73–94 | **missing pages 95, 96** |
+
+  Each has cached OCR under `output/.cache`, so detection can be re-run in seconds
+  without re-OCRing. **Never run `draft --force` across these** — it overwrites the
+  operator's saved reviews, which are not in git. To inspect detection, call
+  `outline.detect_body_start` on `pipeline._sheet_text` output; that writes nothing.
+  Current code detects (1,1), (1,27), (1,49), (1,73) on the four — correct for all.
 
 ## Delivery phases
 
@@ -229,6 +243,28 @@ Non-obvious things the spike established — read the findings doc before writin
   1, which silently destroyed a correct detection -- express the mapping, never assume it.
 - **The front matter is known, not guessed.** Sheet 1 is the cover and the contents sheet
   was already found; both are bookmarked automatically.
+- **A field the operator edits must redraw what it controls.** The two page-label entries
+  were written once when an issue loaded and read again only when saving, with no
+  `trace_add` between. Typing a corrected starting page changed nothing on screen, so the
+  program looked as though it had stopped adjusting page numbers at all. `grid.OutlineGrid.
+  set_page_labels` now holds the rule and the window redraws on every keystroke.
+
+- **`detect_body_start` reads only `lines[:2]`, and this journal prints half its folios at
+  the foot of the page.** Vol 1 No 2's sheet 3 prints 27 at OCR line 47; sheet 5 prints 31
+  at line 40. Compare Vol 1 No 3, whose sheets 3, 5 and 7 print 51, 53 and 55 in the same
+  mid-page position — so a bare number there is a real folio, not noise. An earlier note in
+  this project called Vol 1 No 2's 27 "mirrored show-through"; **that was wrong.**
+
+- **An issue with a gap cannot be described by one (sheet, printed) pair.** Vol 1 No 2 is
+  cover 25, contents 26, sheet 3 = printed 27, **pages 28 and 29 never scanned**, then
+  sheets 4-20 = 30-46. Three independent facts agree: sheet 3's own folio, the contents
+  citing 27 for the article whose heading is on sheet 3, and the article it cites at 28
+  being absent from the scan. Seeing only the post-gap folios, the detector measured one
+  offset and extrapolated back through the hole, landing the cover on 27. It is right for
+  17 sheets of 20 and wrong for the first three. PDF `/PageLabels` is a number tree and
+  can express both runs; the model cannot yet. **Rescanning 28-29 removes the problem
+  entirely** — prefer that over modelling the gap.
+
 - **A setting whose effect the operator cannot see will be worked around.** The front
   matter's page labels were right, and the Printed page column showed a dash for them, so
   an operator with no confirmation that "sheet 3 is printed page 1" had taken effect typed

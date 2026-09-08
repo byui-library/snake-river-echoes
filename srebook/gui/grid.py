@@ -214,6 +214,34 @@ class OutlineGrid:
             return "not at all"
         return f"{labels[0]} to {labels[-1]}"
 
+    def set_page_labels(self, sheet_text: str, printed_text: str) -> bool:
+        """Apply the operator's "sheet N is printed page P" setting.
+
+        Returns True only when the mapping actually changed, so the widget
+        layer knows whether to redraw. It is called on every keystroke, and
+        redrawing regardless would fight the operator's cursor.
+
+        A field mid-edit -- empty, or not yet a number -- leaves the mapping
+        alone. She has to clear the box before typing a new number, and
+        treating that intermediate state as a change blanks the column
+        underneath her.
+        """
+        sheet_text, printed_text = sheet_text.strip(), printed_text.strip()
+        if not (sheet_text.isdigit() and printed_text.isdigit()):
+            return False
+        sheet, printed = int(sheet_text), int(printed_text)
+        # There is no printed page zero, and no sheet zero. An anchor past the
+        # end of the issue would label every sheet roman.
+        if sheet < 1 or printed < 1 or sheet > self.sheet_count:
+            return False
+        if (sheet, printed) == (self.issue.body_starts_at_sheet,
+                                self.issue.body_starts_at_printed):
+            return False
+        self.issue.body_starts_at_sheet = sheet
+        self.issue.body_starts_at_printed = printed
+        self.dirty = True
+        return True
+
     def set_printed_text(self, index: int, text: str) -> bool:
         """Place a row by the label printed on the page, roman or arabic."""
         sheet = sheet_for_label(self.issue, text, self.sheet_count)

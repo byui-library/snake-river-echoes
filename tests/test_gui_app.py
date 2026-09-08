@@ -202,3 +202,80 @@ def test_the_status_line_distinguishes_the_two_kinds_of_review():
         assert "keep or remove" in status.lower(), status
     finally:
         root.destroy()
+
+
+# ------------------------------------------------------- page labels ----
+# Vol 1 No 2 was drafted as "sheet 1 is printed page 27" when its pages print
+# 25 onward. Correcting the field changed nothing on screen, because the two
+# entries were only read when saving, so the program looked as though it had
+# stopped adjusting page numbers at all.
+
+def _paginated_app(root, printed=27):
+    from srebook.core.model import Bookmark, Issue
+    from srebook.gui.app import App
+    from srebook.gui.grid import OutlineGrid
+    app = App(root)
+    app.sheets = [None] * 20
+    issue = Issue(body_starts_at_sheet=1, body_starts_at_printed=printed,
+                  bookmarks=[Bookmark("Front Cover", 1), Bookmark("Article", 3)])
+    app.grid_model = OutlineGrid(issue, sheet_count=20)
+    app._refresh_tree()
+    return app
+
+
+def test_typing_a_new_starting_page_redraws_the_printed_column():
+    _tk, root = _tk_or_skip()
+    try:
+        app = _paginated_app(root)
+        assert app.tree.item("0", "values")[0] == "27"
+
+        app.label_printed_var.set("25")
+
+        assert app.tree.item("0", "values")[0] == "25"
+        assert app.tree.item("1", "values")[0] == "27"
+        assert app.grid_model.issue.body_starts_at_printed == 25
+    finally:
+        root.destroy()
+
+
+def test_moving_the_anchor_sheet_redraws_the_front_matter_as_roman():
+    _tk, root = _tk_or_skip()
+    try:
+        app = _paginated_app(root, printed=1)
+
+        app.label_sheet_var.set("3")
+
+        assert app.tree.item("0", "values")[0] == "i"
+        assert app.tree.item("1", "values")[0] == "1"
+    finally:
+        root.destroy()
+
+
+def test_clearing_the_field_to_retype_does_not_blank_the_column():
+    """She must clear the box before typing a new number."""
+    _tk, root = _tk_or_skip()
+    try:
+        app = _paginated_app(root)
+
+        app.label_printed_var.set("")
+
+        assert app.tree.item("0", "values")[0] == "27"
+    finally:
+        root.destroy()
+
+
+def test_loading_a_drafted_issue_does_not_rewrite_its_mapping():
+    """_on_drafted fills the fields in; that must not read straight back out
+    and overwrite the mapping the drafter just detected."""
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Bookmark, Issue
+    from srebook.gui.app import App
+    try:
+        app = _paginated_app(root)
+        app._on_drafted(Issue(body_starts_at_sheet=1, body_starts_at_printed=49,
+                              bookmarks=[Bookmark("Front Cover", 1)]), True)
+
+        assert app.grid_model.issue.body_starts_at_printed == 49
+        assert app.tree.item("0", "values")[0] == "49"
+    finally:
+        root.destroy()

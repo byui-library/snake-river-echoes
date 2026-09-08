@@ -37,6 +37,9 @@ class App(ttk.Frame):
         self.preview_cache: dict[tuple[int, tuple[int, int]], ImageTk.PhotoImage] = {}
         self.events: queue.Queue = queue.Queue()
         self.busy = False
+        # Set while the page-label fields are being filled in from a freshly
+        # drafted issue, so writing them does not read straight back out.
+        self._loading_labels = False
 
         self.pack(fill="both", expand=True)
         self._build_widgets()
@@ -107,6 +110,12 @@ class App(ttk.Frame):
         ttk.Label(labels, text="is printed page").pack(side="left")
         ttk.Entry(labels, textvariable=self.label_printed_var, width=5).pack(
             side="left", padx=(4, 16))
+        # The column has to follow the mapping as she types it. Without this
+        # the numbers stayed as drafted, so correcting the starting page looked
+        # like the program had stopped adjusting pages altogether.
+        self.label_sheet_var.trace_add("write", self._on_page_labels_edited)
+        self.label_printed_var.trace_add("write", self._on_page_labels_edited)
+
         ttk.Label(labels, text="Image quality").pack(side="left")
         ttk.Combobox(labels, textvariable=self.quality_var, width=18, state="readonly",
                      values=list(QUALITY_CHOICES)).pack(side="left", padx=4)
@@ -276,8 +285,10 @@ class App(ttk.Frame):
         self.issue_var.set("" if issue.issue is None else str(issue.issue))
         self.year_var.set("" if issue.year is None else str(issue.year))
         self.publisher_var.set(issue.publisher or "")
+        self._loading_labels = True
         self.label_sheet_var.set(str(issue.body_starts_at_sheet))
         self.label_printed_var.set(str(issue.body_starts_at_printed))
+        self._loading_labels = False
 
         self.grid_model = OutlineGrid(issue, sheet_count=len(self.sheets))
         self._refresh_tree()
@@ -333,6 +344,15 @@ class App(ttk.Frame):
         messagebox.showerror("SRE Book Builder", message)
 
     # ----------------------------------------------------------- grid ----
+
+    def _on_page_labels_edited(self, *_args) -> None:
+        """Redraw the printed page column as the mapping is typed."""
+        if self._loading_labels or not self.grid_model:
+            return
+        if self.grid_model.set_page_labels(self.label_sheet_var.get(),
+                                           self.label_printed_var.get()):
+            selection = self.tree.selection()
+            self._refresh_tree(int(selection[0]) if selection else None)
 
     def _refresh_tree(self, select: int | None = None) -> None:
         self.tree.delete(*self.tree.get_children())
