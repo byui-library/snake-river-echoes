@@ -104,7 +104,26 @@ def _count_entries(bookmarks: list[Bookmark]) -> int:
     return sum(1 + _count_entries(b.children) for b in bookmarks)
 
 
+def _publishable(bookmarks: list[Bookmark]) -> list[Bookmark]:
+    """Drop bookmarks whose page the scan does not contain.
+
+    They stay in the sidecar, so rescanning the pages and rebuilding restores
+    them in place. In the PDF they would have to jump somewhere they do not
+    belong, and a bookmark that lands on the wrong page is worse than no
+    bookmark: a reader has no way to tell.
+    """
+    kept = []
+    for b in bookmarks:
+        if b.review_reason == "missing":
+            continue
+        kept.append(Bookmark(b.title, b.sheet, _publishable(b.children),
+                             b.needs_review, b.review_reason, b.missing_page))
+    return kept
+
+
 def _add_outline(pdf: pikepdf.Pdf, issue: Issue, pages: list[pikepdf.Object]) -> None:
+    issue = Issue(**{**issue.__dict__,
+                     "bookmarks": _publishable(issue.bookmarks)})
     if not issue.bookmarks:
         return
 
@@ -158,10 +177,17 @@ def _add_page_labels(pdf: pikepdf.Pdf, issue: Issue, sheet_count: int) -> None:
     if body_index > 0:
         nums.append(0)
         nums.append(pikepdf.Dictionary(S=pikepdf.Name.r))
-    if body_index < sheet_count:
-        nums.append(body_index)
-        nums.append(pikepdf.Dictionary(
-            S=pikepdf.Name.D, St=max(issue.body_starts_at_printed, 1)))
+
+    # A run per stretch of consecutive numbers. A scan missing two pages in
+    # the middle carries 25, 26, 27 then 30, and one run cannot say that --
+    # /PageLabels is a number tree precisely so it can.
+    previous: int | None = None
+    for index in range(body_index, sheet_count):
+        number = int(labels[index])
+        if previous is None or number != previous + 1:
+            nums.append(index)
+            nums.append(pikepdf.Dictionary(S=pikepdf.Name.D, St=max(number, 1)))
+        previous = number
 
     pdf.Root.PageLabels = pdf.make_indirect(pikepdf.Dictionary(Nums=nums))
 

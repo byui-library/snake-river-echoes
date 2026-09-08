@@ -301,3 +301,44 @@ def test_a_pdf_without_bookmarks_does_not_ask_for_an_outline_panel(tmp_path):
 
     with pikepdf.open(out) as pdf:
         assert "/PageMode" not in pdf.Root.keys() or str(pdf.Root.PageMode) != "/UseOutlines"
+
+
+# --------------------------------------------------- a gap in the scan ----
+
+def test_page_labels_restart_after_a_gap(tmp_path):
+    """Vol 1 No 2 carries 25, 26, 27 then jumps to 30. /PageLabels is a number
+    tree and says so in two runs."""
+    issue = an_issue(body_starts_at_sheet=1, body_starts_at_printed=25,
+                     missing_pages=[28, 29], gap_acknowledged=True)
+
+    out = build(tmp_path, issue, [page() for _ in range(5)])
+
+    with pikepdf.open(out) as pdf:
+        nums = pdf.Root.PageLabels.Nums       # flat: index, dict, index, dict
+        assert len(nums) == 4
+        assert (int(nums[0]), int(nums[1].St)) == (0, 25)
+        assert (int(nums[2]), int(nums[3].St)) == (3, 30)
+
+
+def test_a_complete_scan_still_gets_one_run(tmp_path):
+    issue = an_issue(body_starts_at_sheet=1, body_starts_at_printed=49)
+
+    out = build(tmp_path, issue, [page() for _ in range(4)])
+
+    with pikepdf.open(out) as pdf:
+        assert len(pdf.Root.PageLabels.Nums) == 2
+
+
+def test_a_bookmark_for_an_unscanned_page_is_not_written_to_the_pdf(tmp_path):
+    """It waits in the saved review instead. A bookmark that jumps to the
+    wrong page is worse than no bookmark, because a reader cannot tell."""
+    issue = an_issue(missing_pages=[28], gap_acknowledged=True, bookmarks=[
+        Bookmark("Front Cover", 1),
+        Bookmark("The Battle of Pierre's Hole", 1, needs_review=True,
+                 review_reason="missing", missing_page=28)])
+
+    out = build(tmp_path, issue, [page() for _ in range(3)])
+
+    with pikepdf.open(out) as pdf:
+        titles = [item.title for item in pdf.open_outline().root]
+        assert titles == ["Front Cover"]
