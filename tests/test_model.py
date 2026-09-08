@@ -353,3 +353,18 @@ def test_printed_for_sheet_crosses_a_gap():
 
     assert printed_for_sheet(issue, 3) == 27
     assert printed_for_sheet(issue, 4) == 30
+
+
+def test_the_acknowledgement_survives_a_save(tmp_path):
+    path = tmp_path / "i.json"
+    save_sidecar(Issue(missing_pages=[28, 29], gap_acknowledged=True), path)
+
+    assert load_sidecar(path).gap_acknowledged is True
+
+
+def test_an_older_sidecar_has_not_acknowledged_anything(tmp_path):
+    """A saved review written before this existed must still load."""
+    path = tmp_path / "i.json"
+    path.write_text('{"title": "SRE", "missing_pages": [28]}', encoding="utf-8")
+
+    assert load_sidecar(path).gap_acknowledged is False

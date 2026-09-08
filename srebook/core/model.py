@@ -63,6 +63,9 @@ class Issue:
     # Pages the contents page cites that no sheet carries -- almost always
     # pages missed at the scanner. Recorded so a rebuild still reports them.
     missing_pages: list[int] = field(default_factory=list)
+    # Whether a person has looked at that list and accepted it. Reset whenever
+    # the list changes, so a corrected gap is examined again before publishing.
+    gap_acknowledged: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -78,6 +81,7 @@ class Issue:
             },
             "bookmarks": [b.to_dict() for b in self.bookmarks],
             **({"missing_pages": self.missing_pages} if self.missing_pages else {}),
+            **({"gap_acknowledged": True} if self.gap_acknowledged else {}),
         }
 
     @classmethod
@@ -94,6 +98,7 @@ class Issue:
             body_starts_at_printed=labels.get("body_starts_at_printed", 1),
             bookmarks=[Bookmark.from_dict(b) for b in d.get("bookmarks", [])],
             missing_pages=d.get("missing_pages", []),
+            gap_acknowledged=d.get("gap_acknowledged", False),
         )
 
     def display_title(self) -> str:
