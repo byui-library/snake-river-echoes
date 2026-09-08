@@ -459,16 +459,55 @@ def cited_pages(lines: list[str]) -> list[int]:
     return pages
 
 
+FOLIO_MAX_GAP = 20      # a plausible run of pages missed at the scanner
+
+
 def printed_folios(sheets: dict[int, list[str]]) -> dict[int, int]:
-    """The page number printed on each sheet that shows one."""
-    folios: dict[int, int] = {}
+    """The page number printed on each sheet that shows one.
+
+    This journal prints roughly half its folios at the foot of the page, so a
+    bare number can appear anywhere in a sheet's OCR. Reading only the first
+    two lines saw the top ones and missed the rest -- and on Vol 1 No 2 every
+    folio it could see happened to sit after the gap, which is how the cover
+    came to be numbered 27 instead of 25.
+
+    Taking every bare number would let a year in the prose pose as a folio, so
+    the offset that most sheets agree on forms a spine, and a number on any
+    other sheet is accepted only where it falls between its neighbours on that
+    spine. That keeps a genuine pre-gap folio, which disagrees with the spine
+    by exactly the size of the gap, and rejects an OCR slip, which does not
+    fit the sequence at all.
+    """
+    candidates: dict[int, list[int]] = {}
     for sheet, lines in sheets.items():
-        for line in lines[:2]:
-            text = line.strip()
-            if text.isdigit() and 1 <= int(text) <= 2000:
-                folios[sheet] = int(text)
-                break
-    return folios
+        found = [int(text) for text in (line.strip() for line in lines)
+                 if text.isdigit() and 1 <= int(text) <= 2000]
+        if found:
+            candidates[sheet] = found
+
+    tally = Counter(sheet - number
+                    for sheet, numbers in candidates.items() for number in numbers)
+    if not tally:
+        return {}
+    dominant, _ = tally.most_common(1)[0]
+
+    # The spine: sheets printing a folio that matches the common offset. It is
+    # monotonic by construction, one page per sheet.
+    spine = {sheet: sheet - dominant for sheet, numbers in candidates.items()
+             if (sheet - dominant) in numbers}
+
+    folios = dict(spine)
+    for sheet, numbers in candidates.items():
+        if sheet in spine:
+            continue
+        best = min(numbers, key=lambda n: (abs((sheet - n) - dominant), n))
+        if abs((sheet - best) - dominant) > FOLIO_MAX_GAP:
+            continue
+        below = [f for s, f in spine.items() if s < sheet]
+        above = [f for s, f in spine.items() if s > sheet]
+        if (not below or best > max(below)) and (not above or best < min(above)):
+            folios[sheet] = best
+    return dict(sorted(folios.items()))
 
 
 def missing_pages(cited: list[int], folios: dict[int, int],

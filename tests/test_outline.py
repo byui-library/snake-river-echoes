@@ -695,3 +695,31 @@ def test_folios_too_scattered_to_agree_report_nothing():
                                     sheet_count=20, first_body_sheet=3)
 
     assert missing == []
+
+
+# ------------------------------------------------ folios at the foot ----
+# This journal prints roughly half its folios at the bottom of the page.
+# Reading only the first two OCR lines saw the top ones and missed the rest,
+# and on Vol 1 No 2 every folio it could see sat after the gap.
+
+def test_a_folio_at_the_foot_of_the_page_counts():
+    body = {3: ["EASTERN IDAHO REVISITED"] + ["text"] * 40 + ["27"],
+            4: ["30", "text"],
+            5: ["text"] * 30 + ["31"]}
+
+    assert outline.printed_folios(body) == {3: 27, 4: 30, 5: 31}
+
+
+def test_a_number_in_the_body_text_does_not_beat_the_real_folio():
+    """A year or a figure inside the prose agrees with no other sheet."""
+    body = {4: ["30", "In 1883 the railroad came"],
+            5: ["1883", "text", "31"],
+            6: ["32", "text"]}
+
+    assert outline.printed_folios(body) == {4: 30, 5: 31, 6: 32}
+
+
+def test_a_sheet_whose_only_number_agrees_with_nothing_contributes_none():
+    body = {4: ["30"], 5: ["31"], 6: ["1883"]}
+
+    assert outline.printed_folios(body) == {4: 30, 5: 31}
