@@ -81,6 +81,7 @@ class App(ttk.Frame):
         self.publisher_var = tk.StringVar()
         self.label_sheet_var = tk.StringVar(value="1")
         self.label_printed_var = tk.StringVar(value="1")
+        self.missing_var = tk.StringVar()
         self.quality_var = tk.StringVar(value="Balanced (200 DPI)")
 
         ttk.Label(meta, text="Title").grid(row=0, column=0, sticky="w")
@@ -117,8 +118,24 @@ class App(ttk.Frame):
         self.label_printed_var.trace_add("write", self._on_page_labels_edited)
 
         ttk.Label(labels, text="Image quality").pack(side="left")
-        ttk.Combobox(labels, textvariable=self.quality_var, width=18, state="readonly",
-                     values=list(QUALITY_CHOICES)).pack(side="left", padx=4)
+        self._quality_box = ttk.Combobox(
+            labels, textvariable=self.quality_var, width=18, state="readonly",
+            values=list(QUALITY_CHOICES))
+        self._quality_box.pack(side="left", padx=4)
+
+        # Detection reads these off the folios, but it is reading OCR of a
+        # forty-year-old page. The operator has the last word, and correcting
+        # the list renumbers everything after it.
+        gaps = ttk.Frame(meta)
+        gaps.grid(row=4, column=0, columnspan=4, sticky="w", pady=(8, 0))
+        ttk.Label(gaps, text="Pages missing from this scan").pack(side="left")
+        ttk.Entry(gaps, textvariable=self.missing_var, width=18).pack(
+            side="left", padx=4)
+        self.acknowledge_button = ttk.Button(
+            gaps, text="I have checked these", command=self.acknowledge_gap,
+            state="disabled")
+        self.acknowledge_button.pack(side="left", padx=(8, 0))
+        self.missing_var.trace_add("write", self._on_missing_pages_edited)
 
         # --- bookmarks + preview ---
         middle = ttk.LabelFrame(self, text="Bookmarks", padding=8)
@@ -288,6 +305,7 @@ class App(ttk.Frame):
         self._loading_labels = True
         self.label_sheet_var.set(str(issue.body_starts_at_sheet))
         self.label_printed_var.set(str(issue.body_starts_at_printed))
+        self.missing_var.set(", ".join(str(p) for p in issue.missing_pages))
         self._loading_labels = False
 
         self.grid_model = OutlineGrid(issue, sheet_count=len(self.sheets))
@@ -298,10 +316,18 @@ class App(ttk.Frame):
         # Two different jobs. Saying "n need a sheet number" about a heading we
         # read off its own page is simply wrong, and sends the operator looking
         # for a number instead of making a decision.
+        def counting(reason: str) -> int:
+            return sum(1 for r in self.grid_model.rows
+                       if r.needs_review and r.review_reason == reason)
+
+        # Three jobs now, and they want different things. Asking for a page
+        # number for an article whose page was never scanned sends the operator
+        # looking for something that is not there.
+        missing = counting("missing")
+        suggested = counting("suggested")
         unplaced = sum(1 for r in self.grid_model.rows
-                       if r.needs_review and r.review_reason != "suggested")
-        suggested = sum(1 for r in self.grid_model.rows
-                        if r.needs_review and r.review_reason == "suggested")
+                       if r.needs_review
+                       and r.review_reason not in ("suggested", "missing"))
         count = len(self.grid_model.rows)
         if fresh:
             lead = f"{count} bookmarks proposed."
@@ -314,7 +340,10 @@ class App(ttk.Frame):
             notes.append(f"{unplaced} need a page number")
         if suggested:
             notes.append(f"{suggested} to keep or remove")
+        if missing:
+            notes.append(f"{missing} waiting on pages not in this scan")
         self.status.config(text=lead + (" " + ", ".join(notes) + "." if notes else ""))
+        self._update_acknowledge_button()
 
         # A scan missing pages is worth interrupting for: otherwise the operator
         # hunts for articles that were never scanned, and may publish an issue
@@ -353,6 +382,26 @@ class App(ttk.Frame):
                                            self.label_printed_var.get()):
             selection = self.tree.selection()
             self._refresh_tree(int(selection[0]) if selection else None)
+
+    def _on_missing_pages_edited(self, *_args) -> None:
+        """Renumber as the gap is corrected."""
+        if self._loading_labels or not self.grid_model:
+            return
+        if self.grid_model.set_missing_pages(self.missing_var.get()):
+            selection = self.tree.selection()
+            self._refresh_tree(int(selection[0]) if selection else None)
+            self._update_acknowledge_button()
+
+    def acknowledge_gap(self) -> None:
+        if not self.grid_model:
+            return
+        self.grid_model.acknowledge_gap()
+        self._update_acknowledge_button()
+
+    def _update_acknowledge_button(self) -> None:
+        issue = self.grid_model.issue if self.grid_model else None
+        waiting = bool(issue and issue.missing_pages and not issue.gap_acknowledged)
+        self.acknowledge_button.config(state="normal" if waiting else "disabled")
 
     def _refresh_tree(self, select: int | None = None) -> None:
         self.tree.delete(*self.tree.get_children())

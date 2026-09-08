@@ -279,3 +279,82 @@ def test_loading_a_drafted_issue_does_not_rewrite_its_mapping():
         assert app.tree.item("0", "values")[0] == "49"
     finally:
         root.destroy()
+
+
+# --------------------------------------------- pages not in the scan ----
+
+def _gapped_app(root):
+    from srebook.core.model import Bookmark, Issue
+    from srebook.gui.app import App
+    from srebook.gui.grid import OutlineGrid
+    app = App(root)
+    app.sheets = [None] * 20
+    issue = Issue(body_starts_at_sheet=1, body_starts_at_printed=25,
+                  bookmarks=[Bookmark("Front Cover", 1), Bookmark("Article", 3),
+                             Bookmark("Later", 4)])
+    app.grid_model = OutlineGrid(issue, sheet_count=20)
+    app._refresh_tree()
+    return app
+
+
+def test_typing_a_gap_moves_the_pages_after_it():
+    _tk, root = _tk_or_skip()
+    try:
+        app = _gapped_app(root)
+        assert app.tree.item("2", "values")[0] == "28"
+
+        app.missing_var.set("28, 29")
+
+        assert app.tree.item("1", "values")[0] == "27"
+        assert app.tree.item("2", "values")[0] == "30"
+        assert app.grid_model.issue.missing_pages == [28, 29]
+    finally:
+        root.destroy()
+
+
+def test_a_half_typed_gap_does_not_disturb_the_column():
+    _tk, root = _tk_or_skip()
+    try:
+        app = _gapped_app(root)
+
+        app.missing_var.set("28,")
+
+        assert app.tree.item("2", "values")[0] == "28"
+    finally:
+        root.destroy()
+
+
+def test_acknowledging_the_gap_clears_the_build_problem():
+    _tk, root = _tk_or_skip()
+    try:
+        app = _gapped_app(root)
+        app.missing_var.set("28, 29")
+        assert app.grid_model.problems() != []
+
+        app.acknowledge_gap()
+
+        assert app.grid_model.problems() == []
+    finally:
+        root.destroy()
+
+
+def test_a_bookmark_waiting_on_an_unscanned_page_is_counted_separately():
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Bookmark, Issue
+    from srebook.gui.app import App
+    try:
+        app = App(root)
+        app.sheets = [None] * 20
+        app._on_drafted(Issue(missing_pages=[28], bookmarks=[
+            Bookmark("Front Cover", 1),
+            Bookmark("The Battle of Pierre's Hole", 1, needs_review=True,
+                     review_reason="missing", missing_page=28),
+            Bookmark("Community History", 1, needs_review=True,
+                     review_reason="unplaced"),
+        ]), False)
+
+        status = app.status["text"]
+        assert "not in this scan" in status.lower() or "not scanned" in status.lower(), status
+        assert "1 need" in status or "1 needs" in status, status
+    finally:
+        root.destroy()
