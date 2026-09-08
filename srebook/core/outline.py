@@ -560,29 +560,19 @@ def detect_body_start(sheets: dict[int, list[str]]) -> tuple[int, int] | None:
     Returns None unless the same sheet-to-page offset appears at least twice --
     one bare number on a page is coincidence, not a folio.
     """
-    offsets: Counter[int] = Counter()
-    seen: dict[int, int] = {}
-    for sheet, lines in sheets.items():
-        for line in lines[:2]:
-            text = line.strip()
-            if text.isdigit():
-                printed = int(text)
-                if 1 <= printed <= 2000:
-                    offsets[sheet - printed] += 1
-                    seen.setdefault(sheet - printed, sheet)
-                break
+    folios = printed_folios(sheets)
+    if len(folios) < 2:
+        return None                  # one number is coincidence, not a folio
 
-    if not offsets:
-        return None
-    offset, count = offsets.most_common(1)[0]
-    if count < 2:
-        return None
+    # Count back from the earliest folio, one page per sheet, rather than
+    # extrapolating an offset measured further into the issue. Vol 1 No 2's
+    # sheets 4 onward all follow printed = sheet + 26, but sheet 3 prints 27,
+    # because pages 28 and 29 were never scanned. Extrapolating the later
+    # offset walked straight through that hole and put the cover on 27.
+    first_sheet = min(folios)
+    printed_there = folios[first_sheet]
 
-    # Extrapolate back to printed page 1 rather than reporting the first sheet
-    # that happens to print a number. Not every body page prints its folio, and
-    # reporting the first numbered sheet would label the ones before it as front
-    # matter -- roman i, ii, iii over what are really printed pages 1, 2, 3.
-    sheet = offset + 1
+    sheet = first_sheet - (printed_there - 1)
     if sheet < 1:
-        return 1, 1 - offset
+        return 1, printed_there - first_sheet + 1
     return sheet, 1

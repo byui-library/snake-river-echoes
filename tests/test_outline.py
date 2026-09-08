@@ -741,3 +741,15 @@ def test_folios_from_non_adjacent_sheets_do_not_invent_a_gap():
 
 def test_a_gap_needs_two_folios_to_be_seen():
     assert outline.detect_gaps({4: 30}) == []
+
+
+def test_the_anchor_counts_back_from_the_earliest_folio_not_through_a_gap():
+    """Vol 1 No 2: sheet 3 prints 27, so the cover is 25. Extrapolating the
+    post-gap offset made it 27 and sent someone to rescan the wrong pages."""
+    body = {3: ["A"] * 40 + ["27"], 4: ["30"], 5: ["31"], 6: ["32"]}
+
+    assert outline.detect_body_start(body) == (1, 25)
+
+
+def test_one_folio_alone_is_still_coincidence():
+    assert outline.detect_body_start({4: ["30"]}) is None
