@@ -10,7 +10,7 @@ scans into a single searchable, bookmarked, page-labeled PDF.
 Built for digitizing *Snake River Echoes*, the journal of the Upper Snake River Valley
 Historical Society, but intended to be handed to other archives as an installer.
 
-**Current state: released through v0.1.6 and in daily use.** The installer is verified
+**Current state: released through v0.1.7 and in daily use.** The installer is verified
 on a pristine Windows with no Python and no Tesseract, and a special collections
 employee is processing real issues with it.
 
@@ -21,8 +21,8 @@ one of them — resolve it explicitly rather than silently following the code.
 
 ## Next session — start here
 
-Released through v0.1.6 and in use by a special collections employee. `py -m pytest`
-(318 tests) and `py packaging/build.py` both work from a clean checkout plus the
+Released through v0.1.7 and in use by a special collections employee. `py -m pytest`
+(362 tests) and `py packaging/build.py` both work from a clean checkout plus the
 sample scans.
 
 **Everything of consequence since v0.1.0 was found by someone using the program,
@@ -56,7 +56,7 @@ and reading the folder.
 | Deskew applied to both derivatives | test, and the constraint is documented below |
 | Packaged build refuses a system Tesseract | frozen exe exits 1 on this machine, which has one installed |
 | Installer works with no dev tools | [clean-machine test](docs/superpowers/specs/2026-08-21-clean-machine-test-pass.txt), Windows Sandbox, networking off |
-| Missing pages reported by the packaged build | clean-machine test on v0.1.6 names two pages of Vol 1 No 2 (it says 27, 28; the truth is 28, 29 — see the gap lesson below) |
+| Missing pages reported by the packaged build | clean-machine test on v0.1.7 names pages 28, 29 of Vol 1 No 2, and numbers its cover 25 |
 | AppleDouble files ignored | packaged build reads 22 sheets from a folder of 22 scans + 22 ghosts |
 
 ## Hard constraints
@@ -138,7 +138,7 @@ editing a bookmark and rebuilding must never re-OCR.
 py -m srebook.cli draft "Image Files/SRE Vol 1 Number 1"    # OCR + propose outline
 py -m srebook.cli build "Image Files/SRE Vol 1 Number 1"    # after reviewing the sidecar
 py -m srebook.gui                                            # the window
-py -m pytest                                                 # 318 tests, ~25s
+py -m pytest                                                 # 362 tests, ~30s
 ```
 
 Drafting an issue takes about 80 seconds; building from cached OCR is near-instant.
@@ -177,7 +177,7 @@ Then double-click `dist/clean-test.wsb` to run the whole thing in Windows Sandbo
   | Folder | Sheets | Printed pages | Notes |
   |---|---|---|---|
   | `SRE Vol 1 Number 1` | 22 | 1–22 | sheet 1 is printed page 1, so it cannot show a page-label bug |
-  | `SRE Vol 1 Number 2` | 20 | 25–46 | **missing pages 28, 29** — also the gap-check fixture. The program reports 27, 28 and labels the cover 27; both are wrong, see below |
+  | `SRE Vol 1 Number 2` | 20 | 25–46 | **missing pages 28, 29** — sheet 3 prints 27, sheet 4 prints 30. The gap-check fixture |
   | `SRE Vol 1 Number 3` | 24 | 49–72 | |
   | `SRE Vol 1 Number 4` | 22 | 73–94 | **missing pages 95, 96** |
 

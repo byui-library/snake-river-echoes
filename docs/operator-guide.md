@@ -39,13 +39,22 @@ issue. You can fill in the issue details while it works.
 
 ![Most of this is filled in from the file names.](images/issue-panel.png)
 
-Correct anything wrong. One setting is worth a second look:
+*This picture predates the "Pages missing from this scan" box, which now sits
+below the page-number row.*
+
+Correct anything wrong. Two settings are worth a second look:
 
 > **Sheet ⟨1⟩ is printed page ⟨49⟩**
 >
 > This tells the finished PDF what page numbers to show. The program works it
 > out from the numbers printed in the corners of the pages. **Check it against
 > the issue in your hand.** See *Sheets and printed pages* below.
+
+> **Pages missing from this scan**
+>
+> Usually empty. If it lists page numbers, the folder is short of those pages —
+> see *If pages are missing from the scan* below. You can correct the list, and
+> everything after it renumbers as you type.
 
 **4. Review the bookmarks.** This is the part only a person can do.
 
@@ -66,8 +75,8 @@ If you change a bookmark afterwards, just press Build again — it is quick.
 ![Black bookmarks are settled. Red ones want a decision from you.](images/bookmark-list.png)
 
 Black entries are settled: the program found the article's heading on that page
-and is confident. **Red entries want a decision.** There are two kinds, and they
-need opposite things.
+and is confident. **Red entries want a decision.** There are three kinds, and
+they need different things from you.
 
 The status line at the bottom of the window counts them separately — for
 example *"2 to keep or remove, 1 needs a page number"* — so you can see at a
@@ -93,6 +102,16 @@ because the number it has is only a placeholder.
 These sit **at the bottom of the list**, below everything with a real page,
 because the program has no idea where they go. Do not go looking for them in
 page order.
+
+### "This one is waiting on a page that was never scanned"
+
+The contents page lists an article starting on a page the folder does not
+contain. This is not yours to fix, and the program does not ask you to place it:
+there is no page to point it at until someone rescans.
+
+It shows the printed page it is waiting for, and stays in your saved review. It
+is left out of the PDF. Scan the page, build again, and it takes its place. See
+*If pages are missing from the scan* below.
 
 ### The buttons
 
@@ -170,21 +189,48 @@ program will refuse it. Front matter is what that setting is for.
 
 Sometimes the program will warn you, right after it reads an issue:
 
-> The contents page refers to printed page(s) 27, 28, which no scan in this
+> The contents page refers to printed page(s) 28, 29, which no scan in this
 > folder carries.
 
-It works this out by comparing the page numbers the issue's own contents page
-quotes against the numbers printed on the pages it can see. If the contents
-lists an article on page 28 and no scan carries page 28, that page was almost
-certainly missed at the scanner.
+It works this out two ways. It reads the numbers printed on the pages
+themselves — if one scan prints 27 and the very next prints 30, then 28 and 29
+are not in the folder. And it compares the contents page's own citations against
+the pages it can see, which catches pages missing off the end of an issue, where
+there is no later number to show the jump.
 
-**This is worth stopping for.** Check the issue against the paper copy. If pages
-really are missing, scan them and run the issue again — otherwise you publish a
-book that is quietly incomplete, and the only sign is an article the program
-could not find.
+**This is worth stopping for.** Check the issue against the paper copy.
 
 It is not a guess about your work. Of the first five issues run through this
 program, three turned out to be missing pages that nobody had noticed.
+
+### What the program does about it
+
+**The numbering steps over the gap.** If sheet 3 is page 27 and sheet 4 is page
+30, that is what the finished PDF says. The pages keep the numbers printed on
+them; nothing is renumbered to close the hole.
+
+**The article on the missing page keeps its bookmark.** It sits in the list
+marked as waiting on a page that is not in this scan, showing the page number it
+belongs on. It is **not** written into the PDF — a bookmark that jumps to the
+wrong page is worse than none, because a reader cannot tell. It stays in your
+saved review, so when the pages are scanned and you build again, it comes back
+in the right place on its own.
+
+**You have the last word on the list.** The **Pages missing from this scan**
+box in the issue panel is yours to edit. The program is reading OCR of a page
+printed in 1971 and can misread a number, so if it has this wrong, correct it —
+everything after renumbers as you type.
+
+**It will not build until you answer.** Either correct the list, or click
+**I have checked these**. That is deliberate: publishing a book that is quietly
+short of two pages is the thing this whole check exists to prevent.
+
+### Getting the missing pages in later
+
+Scan the pages that were missed, put them in the folder in reading order, and
+open the issue again. Click **Re-analyse** so the program reads the new scans,
+check the page numbers, and build. The bookmark that was waiting takes its
+place.
 
 ---
 

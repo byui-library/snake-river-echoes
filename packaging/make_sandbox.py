@@ -117,7 +117,7 @@ def main() -> int:
     if not scans.is_dir():
         raise SystemExit(f"Sample scans not found at {scans}")
 
-    # An issue known to be missing pages 27 and 28, so the clean machine test
+    # An issue known to be missing pages 28 and 29, so the clean machine test
     # exercises the missing-page warning rather than only the happy path.
     gappy = ROOT / "Image Files" / "SRE Vol 1 Number 2"
     if not gappy.is_dir():
@@ -138,7 +138,7 @@ def main() -> int:
     print(f"Wrote {config}")
     print(f"  installer   {installer.name} ({installer.stat().st_size / 1e6:.0f} MB)")
     print(f"  scans       {scans.name}")
-    print(f"  gap check   {gappy.name}  (missing pages 27, 28)")
+    print(f"  gap check   {gappy.name}  (missing pages 28, 29)")
     print(f"  results     {RESULTS}")
     print()
     print("Double-click the .wsb file. Windows Sandbox opens a pristine Windows,")

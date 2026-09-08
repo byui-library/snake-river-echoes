@@ -78,9 +78,11 @@ if not defined PDF call :fail "no PDF was produced"
 if defined PDF call :report_pdf
 
 call :section "5. Notice an issue that is missing pages"
-REM Vol 1 No 2 is missing printed pages 27 and 28. A build that cannot spot
-REM that would let an archivist publish an incomplete book believing it whole,
-REM so the clean machine must prove it still spots it once packaged.
+REM Vol 1 No 2 is missing printed pages 28 and 29: its sheet 3 prints 27 and
+REM sheet 4 prints 30. A build that cannot spot that would let an archivist
+REM publish an incomplete book believing it whole, so the clean machine must
+REM prove it still spots it once packaged. This assertion said 27, 28 until
+REM the folios were read properly -- it was pinning a bug.
 if not exist C:\scans-with-a-gap\*.tif call :note "no gap-check scans mapped - skipping"
 if not exist C:\scans-with-a-gap\*.tif goto :summary
 if exist C:\gapwork rmdir /s /q C:\gapwork
@@ -97,10 +99,15 @@ set GRC=%ERRORLEVEL%
 if "%GRC%"=="0" call :pass "warned that pages are missing from the scan"
 if not "%GRC%"=="0" call :fail "did NOT warn about the missing pages"
 
-findstr /c:"27, 28" C:\results\gap-draft.txt >nul
+findstr /c:"28, 29" C:\results\gap-draft.txt >nul
 set NRC=%ERRORLEVEL%
-if "%NRC%"=="0" call :pass "named the missing pages: 27, 28"
-if not "%NRC%"=="0" call :fail "did not name pages 27 and 28"
+if "%NRC%"=="0" call :pass "named the missing pages: 28, 29"
+if not "%NRC%"=="0" call :fail "did not name pages 28 and 29"
+
+findstr /c:"is printed page 25" C:\results\gap-draft.txt >nul
+set ARC=%ERRORLEVEL%
+if "%ARC%"=="0" call :pass "numbered the cover 25, as the pages do"
+if not "%ARC%"=="0" call :fail "did not number the cover 25"
 
 :summary
 call :section "Result"
