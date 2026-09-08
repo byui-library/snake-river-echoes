@@ -498,3 +498,84 @@ def test_changing_the_mapping_marks_the_issue_unsaved():
     g.set_page_labels("1", "23")
 
     assert g.dirty
+
+
+# ------------------------------------------------ pages not in the scan ----
+
+def test_the_missing_pages_field_accepts_a_typed_list():
+    g = a_paginated_grid()
+
+    assert g.set_missing_pages("28, 29")
+
+    assert g.issue.missing_pages == [28, 29]
+
+
+def test_the_missing_list_is_shown_sorted_and_deduplicated():
+    g = a_paginated_grid()
+
+    g.set_missing_pages("29, 28, 29")
+
+    assert g.missing_pages_text() == "28, 29"
+
+
+def test_editing_the_missing_list_withdraws_the_acknowledgement():
+    """A corrected gap must be looked at again before publishing."""
+    g = a_paginated_grid()
+    g.issue.gap_acknowledged = True
+
+    g.set_missing_pages("28")
+
+    assert g.issue.gap_acknowledged is False
+
+
+def test_a_half_typed_missing_list_is_ignored():
+    g = a_paginated_grid()
+    g.set_missing_pages("28, 29")
+
+    assert not g.set_missing_pages("28,")
+    assert not g.set_missing_pages("twenty")
+
+    assert g.issue.missing_pages == [28, 29]
+
+
+def test_clearing_the_field_removes_every_gap():
+    g = a_paginated_grid()
+    g.set_missing_pages("28, 29")
+
+    assert g.set_missing_pages("")
+
+    assert g.issue.missing_pages == []
+
+
+def test_setting_the_same_list_again_reports_no_change():
+    g = a_paginated_grid()
+    g.set_missing_pages("28, 29")
+
+    assert not g.set_missing_pages("28, 29")
+
+
+def test_a_gap_moves_the_printed_pages_after_it():
+    g = a_paginated_grid([Bookmark("Article", 3), Bookmark("Later", 4)])
+    g.set_page_labels("1", "25")
+
+    g.set_missing_pages("28, 29")
+
+    assert [g.printed_display(0), g.printed_display(1)] == ["27", "30"]
+
+
+def test_a_missing_bookmark_shows_the_page_it_is_waiting_for():
+    g = a_paginated_grid([
+        Bookmark("The Battle of Pierre's Hole", 1, needs_review=True,
+                 review_reason="missing", missing_page=28)])
+
+    assert g.printed_display(0) == "28"
+    assert g.sheet_display(0) == grid.UNPLACED_SHEET
+
+
+def test_acknowledging_the_gap_is_remembered():
+    g = a_paginated_grid()
+    g.set_missing_pages("28, 29")
+
+    g.acknowledge_gap()
+
+    assert g.issue.gap_acknowledged is True

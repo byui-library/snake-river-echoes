@@ -28,6 +28,7 @@ class Row:
     level: int = 0
     needs_review: bool = False
     review_reason: str = ""
+    missing_page: int | None = None
 
 
 @dataclass
@@ -47,7 +48,8 @@ class OutlineGrid:
     def _flatten(bookmarks: list[Bookmark], level: int = 0) -> list[Row]:
         rows = []
         for b in bookmarks:
-            rows.append(Row(b.title, b.sheet, level, b.needs_review, b.review_reason))
+            rows.append(Row(b.title, b.sheet, level, b.needs_review,
+                            b.review_reason, b.missing_page))
             rows.extend(OutlineGrid._flatten(b.children, level + 1))
         return rows
 
@@ -58,7 +60,8 @@ class OutlineGrid:
         top: list[Bookmark] = []
         for row in self.rows:
             node = Bookmark(row.title, row.sheet, needs_review=row.needs_review,
-                            review_reason=row.review_reason)
+                            review_reason=row.review_reason,
+                            missing_page=row.missing_page)
             if row.level > 0 and top:
                 top[-1].children.append(node)
             else:
@@ -201,6 +204,10 @@ class OutlineGrid:
     def printed_display(self, index: int) -> str:
         """The printed page number for a row, for the column beside the sheet."""
         row = self.rows[index]
+        # A page that was never scanned still knows which page it is. Showing
+        # the number is the whole point of keeping the bookmark.
+        if row.review_reason == "missing" and row.missing_page is not None:
+            return str(row.missing_page)
         if self._sheet_is_a_guess(row):
             return UNPLACED_SHEET
         # Front matter carries a roman label, not nothing. Showing a dash there
@@ -241,6 +248,40 @@ class OutlineGrid:
         self.issue.body_starts_at_printed = printed
         self.dirty = True
         return True
+
+    # ------------------------------------------ pages not in the scan ----
+
+    def missing_pages_text(self) -> str:
+        return ", ".join(str(p) for p in self.issue.missing_pages)
+
+    def set_missing_pages(self, text: str) -> bool:
+        """Set which printed pages the scan does not contain.
+
+        Detection reads these from the folios, but it is reading OCR of a
+        forty-year-old page, so the operator has the last word. Returns True
+        only when the list actually changed, so the window is not redrawn on
+        every keystroke.
+        """
+        text = text.strip()
+        if text:
+            parts = [p.strip() for p in text.split(",")]
+            if not all(p.isdigit() and int(p) > 0 for p in parts):
+                return False        # still typing, or not a page number
+            pages = sorted({int(p) for p in parts})
+        else:
+            pages = []
+        if pages == self.issue.missing_pages:
+            return False
+        self.issue.missing_pages = pages
+        # A corrected gap has not been looked at yet.
+        self.issue.gap_acknowledged = False
+        self.dirty = True
+        return True
+
+    def acknowledge_gap(self) -> None:
+        """Record that a person has seen the gap and accepts it."""
+        self.issue.gap_acknowledged = True
+        self.dirty = True
 
     def set_printed_text(self, index: int, text: str) -> bool:
         """Place a row by the label printed on the page, roman or arabic."""
