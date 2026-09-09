@@ -342,3 +342,43 @@ def test_a_bookmark_for_an_unscanned_page_is_not_written_to_the_pdf(tmp_path):
     with pikepdf.open(out) as pdf:
         titles = [item.title for item in pdf.open_outline().root]
         assert titles == ["Front Cover"]
+
+
+# ------------------------------------------------------------- colour ----
+
+def _colour_page(embed_dpi=200, ocr_size=(2272, 3302)):
+    """A page whose embedded JPEG is RGB, as a colour scan now produces."""
+    embed_size = (round(ocr_size[0] * embed_dpi / OCR_DPI),
+                  round(ocr_size[1] * embed_dpi / OCR_DPI))
+    buf = io.BytesIO()
+    Image.new("RGB", embed_size, (200, 120, 60)).save(buf, "JPEG", quality=70)
+    return assemble.PageInput(embed_jpeg=buf.getvalue(), embed_size=embed_size,
+                              ocr_size=ocr_size, words=[])
+
+
+def test_a_colour_page_is_declared_as_colour(tmp_path):
+    """The JPEG carries three bytes per pixel. Declaring DeviceGray makes the
+    viewer read each of them as a separate grey pixel, and the page comes out
+    smeared and three times too wide."""
+    out = build(tmp_path, an_issue(), [_colour_page()])
+
+    with pikepdf.open(out) as pdf:
+        image = pdf.pages[0].Resources.XObject.Im0
+        assert str(image.ColorSpace) == "/DeviceRGB"
+
+
+def test_a_grey_page_is_still_declared_as_grey(tmp_path):
+    out = build(tmp_path, an_issue(), [page()])
+
+    with pikepdf.open(out) as pdf:
+        assert str(pdf.pages[0].Resources.XObject.Im0.ColorSpace) == "/DeviceGray"
+
+
+def test_the_declared_width_matches_the_jpeg(tmp_path):
+    """A mismatch here is the same bug seen from the other side."""
+    out = build(tmp_path, an_issue(), [_colour_page()])
+
+    with pikepdf.open(out) as pdf:
+        image = pdf.pages[0].Resources.XObject.Im0
+        decoded = Image.open(io.BytesIO(bytes(image.get_raw_stream_buffer())))
+        assert (int(image.Width), int(image.Height)) == decoded.size

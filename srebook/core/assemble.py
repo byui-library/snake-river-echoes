@@ -6,10 +6,12 @@ stretched to fill it. That is what lets OCR read 300 DPI while the file carries
 """
 from __future__ import annotations
 
+import io
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import pikepdf
+from PIL import Image
 
 from .model import Bookmark, Issue, page_labels, validate
 from .ocr import Word
@@ -69,6 +71,22 @@ def _content_stream(page: PageInput, page_w: float, page_h: float) -> bytes:
     return "\n".join(ops).encode("cp1252", "replace")
 
 
+def _colour_space(jpeg: bytes) -> pikepdf.Name:
+    """What the embedded JPEG actually holds.
+
+    DCTDecode passes the JPEG through untouched, so the PDF has to declare its
+    colour space correctly. Hardcoding DeviceGray while embedding an RGB scan
+    makes a viewer read each pixel's three colour bytes as three separate grey
+    pixels: the page comes out smeared and three times too wide.
+    """
+    with Image.open(io.BytesIO(jpeg)) as image:
+        mode = image.mode
+    return {
+        "RGB": pikepdf.Name.DeviceRGB,
+        "CMYK": pikepdf.Name.DeviceCMYK,
+    }.get(mode, pikepdf.Name.DeviceGray)
+
+
 def _add_page(pdf: pikepdf.Pdf, page: PageInput) -> pikepdf.Object:
     ocr_w, ocr_h = page.ocr_size
     page_w = ocr_w / OCR_DPI * 72.0
@@ -78,7 +96,7 @@ def _add_page(pdf: pikepdf.Pdf, page: PageInput) -> pikepdf.Object:
     image.Type = pikepdf.Name.XObject
     image.Subtype = pikepdf.Name.Image
     image.Width, image.Height = page.embed_size
-    image.ColorSpace = pikepdf.Name.DeviceGray
+    image.ColorSpace = _colour_space(page.embed_jpeg)
     image.BitsPerComponent = 8
     image.Filter = pikepdf.Name.DCTDecode  # raw JPEG passthrough
 
