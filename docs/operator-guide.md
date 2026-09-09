@@ -58,6 +58,17 @@ Correct anything wrong. Two settings are worth a second look:
 Click any bookmark to see that page on the right. Drag the divider between the
 list and the page to make the page bigger, or maximise the window.
 
+**To look at every sheet**, use **◀ Previous sheet** and **Next sheet ▶** under
+the page. The bookmark list holds *articles*, so a sheet carrying none — a blank
+inside the cover, a full-page photograph — appears nowhere in it. Stepping
+through is how you confirm the scan is whole. The caption names each one:
+
+> Sheet 5 of 28 · printed page 2
+> Sheet 2 of 28 · front matter ii
+
+*Front matter* means the page is in the book but the printer put no number on
+it. It is still there, and still becomes a page in the PDF.
+
 **5. Click Build PDF.**
 
 It takes a second or two, because the text was already read in step 2. The PDF
@@ -120,6 +131,7 @@ is left out of the PDF. Scan the page, build again, and it takes its place. See
 | **Add** | A new bookmark, for something the program missed entirely |
 | **Remove** | Deletes the selected bookmark |
 | **↑ ↓** | Moves a bookmark up or down the list |
+| **Merge up** | Joins the selected bookmark onto the one above it, for an article split into a title and a byline |
 | **→ Indent** | Tucks a bookmark under the one above, for poems inside a poetry section |
 | **← Outdent** | Brings it back out to the top level |
 
@@ -127,6 +139,21 @@ is left out of the PDF. Scan the page, build again, and it takes its place. See
 deliberate: a bookmark that jumps to the wrong page is worse than no bookmark,
 because a reader has no way to tell. The third kind — waiting on a page that was
 never scanned — is not yours to fix and does not hold up a build.
+
+### When one article becomes two bookmarks
+
+Some issues print the article's title on one line and the author's name on the
+next, and the program reads them as two separate entries:
+
+> The Rigby Star: 79 Years in Jefferson
+> By A.R. Chandler
+
+The same happens when a long heading is broken across two lines. Select the
+**second** of the pair and click **Merge up**. The two titles join into one, and
+the bookmark keeps the *first* one's page — which is where the article actually
+starts, since the second may have been parked elsewhere.
+
+You do not have to retype anything. Merge as many times as it takes.
 
 ### Finding the right page
 

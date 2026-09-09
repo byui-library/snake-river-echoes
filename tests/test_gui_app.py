@@ -404,3 +404,27 @@ def test_the_stepper_stops_at_the_ends():
         assert str(app.next_sheet_button["state"]) == "disabled"
     finally:
         root.destroy()
+
+
+def test_the_window_merges_the_selected_bookmark_into_the_one_above():
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Bookmark, Issue
+    from srebook.gui.app import App
+    from srebook.gui.grid import OutlineGrid
+    try:
+        app = App(root)
+        app.sheets = [None] * 36
+        app.grid_model = OutlineGrid(Issue(bookmarks=[
+            Bookmark("The Rigby Star: 79 Years", 11),
+            Bookmark("By A.R. Chandler", 11)]), sheet_count=36)
+        app.folder = None            # no autosave target
+        app._refresh_tree()
+        app.tree.selection_set("1")
+
+        app.merge_up()
+
+        assert [r.title for r in app.grid_model.rows] == [
+            "The Rigby Star: 79 Years By A.R. Chandler"]
+        assert app.tree.item("0", "text") == "The Rigby Star: 79 Years By A.R. Chandler"
+    finally:
+        root.destroy()

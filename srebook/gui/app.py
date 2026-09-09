@@ -209,6 +209,9 @@ class App(ttk.Frame):
         buttons.grid(row=1, column=0, columnspan=3, sticky="w", pady=(8, 0))
         for text, command in (("Confirm", self.confirm_row),
                               ("Add", self.add_row), ("Remove", self.remove_row),
+                              # Some issues split an article across two
+                              # bookmarks -- the title, then the byline.
+                              ("Merge up", self.merge_up),
                               ("↑", self.move_up), ("↓", self.move_down),
                               ("→ Indent", self.indent), ("← Outdent", self.outdent)):
             ttk.Button(buttons, text=text, command=command, width=9).pack(
@@ -477,6 +480,22 @@ class App(ttk.Frame):
             return
         self.grid_model.remove(index)
         self._refresh_tree(index)
+        self._autosave()
+
+    def merge_up(self) -> None:
+        """Fold the selected bookmark into the one above it."""
+        index = self._selected()
+        if index is None or not self.grid_model:
+            return
+        if not self.grid_model.can_merge_up(index):
+            messagebox.showinfo(
+                "SRE Book Builder",
+                "Select the second of the two bookmarks — usually the author "
+                "line — and it will be joined onto the one above it.\n\n"
+                "A bookmark with pieces nested under it cannot be merged; "
+                "outdent those first.")
+            return
+        self._refresh_tree(self.grid_model.merge_up(index))
         self._autosave()
 
     def _apply(self, action) -> None:

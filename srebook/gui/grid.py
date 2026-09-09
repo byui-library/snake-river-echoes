@@ -113,6 +113,33 @@ class OutlineGrid:
             row.needs_review = False
         self.dirty = True
 
+    # ----------------------------------------------------------- merge ----
+
+    def can_merge_up(self, index: int) -> bool:
+        # A row with children would leave them with no parent.
+        return index > 0 and self._children_of(index) == 0
+
+    def merge_up(self, index: int) -> int:
+        """Fold a row into the one above it, and return the survivor.
+
+        Some issues split an article across two bookmarks: the title, then the
+        byline underneath it. Others break a long heading in half. Both want
+        the same repair, and the operator was reduced to retyping the title by
+        hand to get it.
+
+        The earlier row's sheet wins: that is where the article starts, while
+        the second row may have been parked anywhere.
+        """
+        if not self.can_merge_up(index):
+            return index
+        above = self.rows[index - 1]
+        above.title = " ".join(f"{above.title} {self.rows[index].title}".split())
+        above.needs_review = False      # it has just been looked at
+        above.missing_page = None
+        del self.rows[index]
+        self.dirty = True
+        return index - 1
+
     # --------------------------------------------------------- nesting ----
 
     def can_indent(self, index: int) -> bool:

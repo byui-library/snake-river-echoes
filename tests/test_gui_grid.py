@@ -617,3 +617,76 @@ def test_a_sheet_outside_the_issue_is_pulled_back_in():
 
     assert g.step_sheet(99, 1) == 24
     assert g.step_sheet(0, -1) == 1
+
+
+# --------------------------------------------------------------- merge ----
+# Vol 4 No 2 & 3 splits an article across two bookmarks: the title, then the
+# byline. Retyping the title to join them by hand is what the operator was
+# reduced to.
+
+def test_merge_up_joins_the_titles():
+    g = a_grid([Bookmark("The Rigby Star: 79 Years", 11),
+                Bookmark("By A.R. Chandler", 11)])
+
+    g.merge_up(1)
+
+    assert rows_of(g) == [("The Rigby Star: 79 Years By A.R. Chandler", 11, 0)]
+
+
+def test_merge_keeps_the_first_rows_sheet():
+    """The title's sheet is where the article starts; the byline may have been
+    parked somewhere else entirely."""
+    g = a_grid([Bookmark("Heise Ferry Crossing", 12), Bookmark("By Virginia Morgan", 1)])
+
+    g.merge_up(1)
+
+    assert g.rows[0].sheet == 12
+
+
+def test_merge_also_reunites_a_title_the_parser_split():
+    g = a_grid([Bookmark("Jefferson Historical Society Seeks", 29),
+                Bookmark("To Preserve County Heritage", 29)])
+
+    g.merge_up(1)
+
+    assert g.rows[0].title == "Jefferson Historical Society Seeks To Preserve County Heritage"
+
+
+def test_merge_tidies_the_spacing():
+    g = a_grid([Bookmark("Camus  ", 24), Bookmark("  By Ada Smith", 24)])
+
+    g.merge_up(1)
+
+    assert g.rows[0].title == "Camus By Ada Smith"
+
+
+def test_the_first_row_cannot_merge_up():
+    g = a_grid([Bookmark("Front Cover", 1)])
+
+    assert not g.can_merge_up(0)
+
+
+def test_a_row_with_children_cannot_merge_up():
+    """Its children would be left with no parent."""
+    g = a_grid([Bookmark("A", 1),
+                Bookmark("Poetry", 19, children=[Bookmark("Poem", 21)])])
+
+    assert not g.can_merge_up(1)
+
+
+def test_merging_counts_as_reviewing_the_result():
+    g = a_grid([Bookmark("Token Tales", 23),
+                Bookmark("By Kendall Ballard", 1, needs_review=True,
+                         review_reason="unplaced")])
+
+    g.merge_up(1)
+
+    assert not g.needs_attention(0)
+    assert g.dirty
+
+
+def test_merge_returns_the_surviving_row():
+    g = a_grid([Bookmark("A", 1), Bookmark("B", 2), Bookmark("C", 3)])
+
+    assert g.merge_up(2) == 1
+    assert rows_of(g) == [("A", 1, 0), ("B C", 2, 0)]
