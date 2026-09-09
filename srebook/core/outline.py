@@ -493,6 +493,40 @@ def cited_page_for(lines: list[str], title: str) -> int | None:
 
 
 FOLIO_MAX_GAP = 20      # a plausible run of pages missed at the scanner
+FOLIO_LIMIT = 1499      # no issue of this journal is thousands of pages long
+
+
+# A folio may be dressed: -5-, [5], (5), 5. -- but 36-37 is a span, not a page.
+FOLIO_LINE = re.compile(r"^[\s\-–—_.,:·\[\(]*(\d{1,4})[\s\-–—_.,:·\]\)]*$")
+
+
+def _folio_on_line(text: str) -> int | None:
+    """The page number a line carries on its own, however it is decorated.
+
+    Vol 27 prints its folios as "-5-". Requiring a line of bare digits made
+    every page of that issue look unnumbered, and with no folios at all the
+    program cannot tell a complete scan from one with pages missing.
+    """
+    match = FOLIO_LINE.match(text)
+    if not match:
+        return None
+    digits = match.group(1)
+    value = int(digits)
+    return value if _could_be_a_folio(value, digits) else None
+
+
+def _could_be_a_folio(value: int, text: str) -> bool:
+    """A page number, not a date standing alone on its own line.
+
+    Volume 18 is a local history journal: its pages are thick with years, and
+    reading 1959 and 1988 as folios made it conclude the issue ran from printed
+    page 1917 to 2004. `cited_pages` has always refused four-digit years; this
+    had not needed to, because it only ever looked at the first two lines of a
+    sheet.
+    """
+    if not 1 <= value <= FOLIO_LIMIT:
+        return False
+    return not (len(text) == 4 and 1500 <= value <= 2100)
 
 
 def printed_folios(sheets: dict[int, list[str]]) -> dict[int, int]:
@@ -513,8 +547,8 @@ def printed_folios(sheets: dict[int, list[str]]) -> dict[int, int]:
     """
     candidates: dict[int, list[int]] = {}
     for sheet, lines in sheets.items():
-        found = [int(text) for text in (line.strip() for line in lines)
-                 if text.isdigit() and 1 <= int(text) <= 2000]
+        found = [folio for folio in (_folio_on_line(line.strip()) for line in lines)
+                 if folio is not None]
         if found:
             candidates[sheet] = found
 

@@ -775,3 +775,46 @@ def test_the_first_entry_takes_the_first_number_after_it():
 
 def test_a_title_the_contents_page_does_not_list_cites_nothing():
     assert outline.cited_page_for(CONTENTS_NO2, "IDAHO POETRY") is None
+
+
+def test_a_year_in_the_prose_is_not_a_folio():
+    """Volume 18 read 1959 and 1988 out of its text and concluded the issue
+    ran from printed page 1917 to 2004. cited_pages already refuses years;
+    reading numbers anywhere on the sheet made this reachable here too."""
+    body = {43: ["text", "1959", "more"], 80: ["1988"], 81: ["also text"]}
+
+    assert outline.printed_folios(body) == {}
+
+
+def test_a_real_folio_survives_beside_a_year():
+    body = {4: ["30", "In 1959 the road was paved"],
+            5: ["31"], 6: ["32"]}
+
+    assert outline.printed_folios(body) == {4: 30, 5: 31, 6: 32}
+
+
+def test_a_folio_written_between_dashes_is_read():
+    """Vol 27 prints its page numbers as -5-. Requiring the line to be nothing
+    but digits made whole issues look as though they carried no numbers."""
+    body = {5: ["text", "-3-"], 6: ["-4-"], 7: ["- 5 -"]}
+
+    assert outline.printed_folios(body) == {5: 3, 6: 4, 7: 5}
+
+
+def test_a_folio_in_brackets_is_read():
+    body = {5: ["[3]"], 6: ["(4)"], 7: ["5."]}
+
+    assert outline.printed_folios(body) == {5: 3, 6: 4, 7: 5}
+
+
+def test_a_dashed_year_is_still_not_a_folio():
+    body = {43: ["-1959-"], 80: ["-1988-"]}
+
+    assert outline.printed_folios(body) == {}
+
+
+def test_a_page_range_is_not_a_folio():
+    """36-37 on a contents line is a span, not this sheet's number."""
+    body = {5: ["36-37"], 6: ["38-39"]}
+
+    assert outline.printed_folios(body) == {}
