@@ -597,6 +597,9 @@ def detect_gaps(folios: dict[int, int]) -> list[int]:
     return gaps
 
 
+PLAUSIBLE_SLACK = 10    # how far past an issue's own pages a gap can reach
+
+
 def pages_not_in_scan(cited: list[int], labels: list[str]) -> list[int]:
     """Pages the contents page cites that no sheet in this scan carries.
 
@@ -610,7 +613,16 @@ def pages_not_in_scan(cited: list[int], labels: list[str]) -> list[int]:
     folio exists to reveal a jump; `detect_gaps` catches a hole in the middle.
     """
     carried = {int(label) for label in labels if label.isdigit()}
-    return sorted({page for page in cited if page not in carried})
+    if not carried:
+        return []
+    # A page missing from the scan still belongs to the issue, so it sits at
+    # the edge of what the issue carries. A contents page appearing to cite
+    # page 100 of an issue that ends at 25 has been misread -- a price, or a
+    # row of leader dots -- and reporting it sends someone to rescan a page
+    # that never existed, and blocks the build until they do.
+    low, high = min(carried) - PLAUSIBLE_SLACK, max(carried) + PLAUSIBLE_SLACK
+    return sorted({page for page in cited
+                   if page not in carried and low <= page <= high})
 
 
 def detect_body_start(sheets: dict[int, list[str]]) -> tuple[int, int] | None:

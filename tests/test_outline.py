@@ -818,3 +818,33 @@ def test_a_page_range_is_not_a_folio():
     body = {5: ["36-37"], 6: ["38-39"]}
 
     assert outline.printed_folios(body) == {}
+
+
+def test_a_cited_page_the_issue_could_never_contain_is_not_missing():
+    """Vol 4 No 1 runs to page 25 and its contents appears to cite 100 -- a
+    price or a row of leader dots misread. Reporting it sends someone to
+    rescan a page that never existed, and blocks the build until they do."""
+    labels = [str(n) for n in range(1, 26)]
+
+    assert outline.pages_not_in_scan([1, 6, 8, 100], labels) == []
+
+
+def test_a_page_just_past_the_end_is_still_missing():
+    """Vol 1 No 4 ends at 94 and its contents cites 95 and 96. Those are
+    plausibly two pages missed at the scanner."""
+    labels = [str(n) for n in range(73, 95)]
+
+    assert outline.pages_not_in_scan([88, 95, 96], labels) == [95, 96]
+
+
+def test_a_page_far_below_the_issue_is_not_missing():
+    """Vol 6 No 4 runs 71 to 98; a cited 5 is not a page of it."""
+    labels = [str(n) for n in range(71, 99)]
+
+    assert outline.pages_not_in_scan([5, 15, 80], labels) == []
+
+
+def test_a_page_just_before_the_first_is_still_missing():
+    labels = [str(n) for n in range(27, 47)]
+
+    assert outline.pages_not_in_scan([25, 30], labels) == [25]
