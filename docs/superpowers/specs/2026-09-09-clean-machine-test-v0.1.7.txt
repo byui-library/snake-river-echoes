@@ -1,5 +1,5 @@
 SRE Book Builder - clean machine test
-Started Wed 09/09/2026  8:32:46.31
+Started Wed 09/09/2026  8:49:16.68
 
 === 1. Confirm the machine really is clean ===
   [ok]   no python on PATH
@@ -82,4 +82,4 @@ Built SRE_1971_Vol1_No1.pdf
 
 === Result ===
 RESULT: PASS - the installer works on a machine with nothing on it
-Finished Wed 09/09/2026  8:34:58.21
+Finished Wed 09/09/2026  8:51:30.44
