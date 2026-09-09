@@ -133,9 +133,30 @@ w("is missing from it.** The program read its page numbers as 1–28 because the
 w("scans are faint and OCR could not make them out — sheet 5's `—27—` came")
 w("through as `xeP=`.")
 w("")
-w("| Issue | Cited but not found | Program thinks the issue runs | Page numbers read |")
+w("They divide into two, and the difference decides what to do about them.")
+w("")
+w("**a. The issue's numbering is not known.** Too few page numbers were readable")
+w("to trust the range, so a citation outside it means nothing. Vol 9 No 2 above")
+w("is one of these. To settle any of them, look at one page and read the number")
+w("printed on it.")
+w("")
+w("| Issue | Cited but not found | Range the program guessed | Page numbers read |")
 w("|---|---|---|---|")
-for r in sorted(suspect, key=lambda r: r["folder"]):
+for r in sorted((x for x in suspect if x["_share"] < CONFIDENT),
+                key=lambda r: r["folder"]):
+    w(f"| {label(r)} | {pages(r['cited_but_absent'])} | {issue_range(r)} | "
+      f"**{r['folios_read']} of {r['body_sheets']}** |")
+w("")
+w("**b. The numbering is well established, so the citation is the error.** Here")
+w("the range is confirmed by many printed page numbers, and the cited page could")
+w("not exist in the issue — page 100 of an issue that ends at 50. The contents")
+w("page has been misread, most often a price or a dot leader taken for a page")
+w("number. Nothing to rescan.")
+w("")
+w("| Issue | Cited but not found | Issue runs | Page numbers read |")
+w("|---|---|---|---|")
+for r in sorted((x for x in suspect if x["_share"] >= CONFIDENT),
+                key=lambda r: r["folder"]):
     w(f"| {label(r)} | {pages(r['cited_but_absent'])} | {issue_range(r)} | "
       f"{r['folios_read']} of {r['body_sheets']} |")
 w("")

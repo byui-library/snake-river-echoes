@@ -52,11 +52,15 @@ def test_deskew_preserves_page_geometry(make_sheet):
     assert straight.ocr_image.size == skewed.ocr_image.size
 
 
-def test_colour_scans_are_converted_to_grayscale(make_sheet):
+def test_a_colour_scan_is_read_in_grey_and_embedded_in_colour(make_sheet):
+    """The two derivatives exist to differ. Tesseract wants grey; the book
+    should carry the colour the scanner captured. This test asserted the
+    embedded image was grey too, which published a colour collection in black
+    and white."""
     sheet = prepare.prepare_sheet(make_sheet(mode="RGB"))
 
     assert sheet.ocr_image.mode == "L"
-    assert Image.open(io.BytesIO(sheet.embed_jpeg)).mode == "L"
+    assert Image.open(io.BytesIO(sheet.embed_jpeg)).mode == "RGB"
 
 
 def test_embed_jpeg_decodes_at_the_declared_size(make_sheet):
@@ -93,3 +97,72 @@ def test_unreadable_file_raises_a_readable_error(tmp_path):
         prepare.prepare_sheet(bad)
 
     assert "broken.tif" in str(e.value)
+
+
+# ------------------------------------------------------------- colour ----
+# Every scan was converted to greyscale, which was right when the whole
+# corpus was 1971 typescript. 64 of the 73 folders are colour, and their
+# published books were coming out black and white.
+
+def _colour_page(tmp_path, name="colour.tif", mode="RGB"):
+    grey = text_like_page()
+    page = Image.merge("RGB", (grey, grey.point(lambda v: min(255, v + 60)), grey))
+    if mode == "RGBA":
+        page = page.convert("RGBA")
+    path = tmp_path / name
+    page.save(path, dpi=(300, 300))
+    return path
+
+
+def test_a_colour_scan_is_embedded_in_colour(tmp_path):
+    sheet = prepare.prepare_sheet(_colour_page(tmp_path))
+
+    embedded = Image.open(io.BytesIO(sheet.embed_jpeg))
+
+    assert embedded.mode == "RGB"
+
+
+def test_a_scan_with_transparency_is_embedded_in_colour(tmp_path):
+    """RGBA is the commonest mode in this collection; JPEG cannot hold alpha."""
+    sheet = prepare.prepare_sheet(_colour_page(tmp_path, "alpha.tif", "RGBA"))
+
+    embedded = Image.open(io.BytesIO(sheet.embed_jpeg))
+
+    assert embedded.mode == "RGB"
+
+
+def test_a_greyscale_scan_stays_greyscale(tmp_path):
+    path = tmp_path / "grey.tif"
+    text_like_page().save(path, dpi=(300, 300))
+
+    sheet = prepare.prepare_sheet(path)
+
+    assert Image.open(io.BytesIO(sheet.embed_jpeg)).mode == "L"
+
+
+def test_ocr_still_reads_greyscale_whatever_the_source(tmp_path):
+    """Tesseract is tuned for greyscale, and the text layer must not change
+    because a scan happens to be in colour."""
+    sheet = prepare.prepare_sheet(_colour_page(tmp_path))
+
+    assert sheet.ocr_image.mode == "L"
+
+
+def test_the_deskew_angle_is_applied_to_the_colour_image_too(tmp_path):
+    """Rotating one derivative and not the other slides the invisible text off
+    the words -- the worst failure this project has."""
+    grey = text_like_page(rotate=1.0)
+    page = Image.merge("RGB", (grey, grey, grey))
+    path = tmp_path / "skewed.tif"
+    page.save(path, dpi=(300, 300))
+
+    sheet = prepare.prepare_sheet(path)
+
+    assert abs(sheet.skew_deg) >= prepare.DESKEW_MIN_DEG
+    embedded = Image.open(io.BytesIO(sheet.embed_jpeg)).convert("L")
+    # Straightened: row darkness is far more periodic than in the skewed source.
+    import numpy as np
+    straight = float(np.var(np.asarray(embedded, dtype=np.float32).sum(axis=1)))
+    skewed = float(np.var(np.asarray(page.convert("L").resize(embedded.size),
+                                     dtype=np.float32).sum(axis=1)))
+    assert straight > skewed

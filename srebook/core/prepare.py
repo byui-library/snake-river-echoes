@@ -74,16 +74,31 @@ def prepare_sheet(path: Path, ocr_dpi: int = 300, embed_dpi: int = 200) -> Prepa
     except (UnidentifiedImageError, OSError) as exc:
         raise PrepareError(f"Could not read the scan {path.name}: {exc}") from exc
 
-    if image.mode != "L":
-        image = image.convert("L")
+    # Keep the colour the scanner captured. Most of this collection is in
+    # colour, and converting everything to grey published forty years of a
+    # county history journal in black and white for a 7% saving in file size.
+    if image.mode == "RGBA":
+        # JPEG cannot hold transparency, and RGBA is the commonest mode here.
+        flat = Image.new("RGB", image.size, (255, 255, 255))
+        flat.paste(image, mask=image.split()[3])
+        image = flat
+    elif image.mode not in ("L", "RGB"):
+        image = image.convert("RGB")
 
-    skew = measure_skew(image)
+    grey = image if image.mode == "L" else image.convert("L")
+    skew = measure_skew(grey)
     if abs(skew) >= DESKEW_MIN_DEG:
         # expand=False keeps the two derivatives related by a single scale
         # factor, which is what lets hOCR coordinates map onto the embedded image.
-        image = image.rotate(skew, resample=Image.BICUBIC, fillcolor=255, expand=False)
+        fill = 255 if image.mode == "L" else (255, 255, 255)
+        image = image.rotate(skew, resample=Image.BICUBIC, fillcolor=fill,
+                             expand=False)
     else:
         skew = 0.0
+
+    # Derived from the rotated image rather than rotated separately, so the two
+    # derivatives cannot drift apart and slide the text layer off the words.
+    ocr_image = image if image.mode == "L" else image.convert("L")
 
     scale = embed_dpi / ocr_dpi
     embed_size = (round(image.width * scale), round(image.height * scale))
@@ -94,7 +109,7 @@ def prepare_sheet(path: Path, ocr_dpi: int = 300, embed_dpi: int = 200) -> Prepa
                dpi=(embed_dpi, embed_dpi))
 
     return PreparedSheet(
-        ocr_image=image,
+        ocr_image=ocr_image,
         embed_jpeg=buf.getvalue(),
         embed_size=embed.size,
         skew_deg=skew,

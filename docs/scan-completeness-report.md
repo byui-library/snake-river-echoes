@@ -58,7 +58,26 @@ is missing from it.** The program read its page numbers as 1–28 because the
 scans are faint and OCR could not make them out — sheet 5's `—27—` came
 through as `xeP=`.
 
-| Issue | Cited but not found | Program thinks the issue runs | Page numbers read |
+They divide into two, and the difference decides what to do about them.
+
+**a. The issue's numbering is not known.** Too few page numbers were readable
+to trust the range, so a citation outside it means nothing. Vol 9 No 2 above
+is one of these. To settle any of them, look at one page and read the number
+printed on it.
+
+| Issue | Cited but not found | Range the program guessed | Page numbers read |
+|---|---|---|---|
+| SRE Volume 8 / SRE Vol 8 Number 4 | 75, 78, 83, 85, 92, 96 | 1–28 | **1 of 25** |
+| SRE Volume 9 / SRE Vol 9 Number 2 | 31, 32, 37, 38, 39, 43, 44, 45, 46, 47, 48 | 1–28 | **1 of 25** |
+| SRE Volume 9 / SRE Vol 9 Number 4 | 74, 75, 76, 80, 82, 84, 87, 91, 94 | 1–28 | **1 of 25** |
+
+**b. The numbering is well established, so the citation is the error.** Here
+the range is confirmed by many printed page numbers, and the cited page could
+not exist in the issue — page 100 of an issue that ends at 50. The contents
+page has been misread, most often a price or a dot leader taken for a page
+number. Nothing to rescan.
+
+| Issue | Cited but not found | Issue runs | Page numbers read |
 |---|---|---|---|
 | SRE Vol 1 Number 4 | 95, 96 | 73–94 | 13 of 20 |
 | SRE Vol 2 Number 1 | 29 | 1–24 | 13 of 22 |
@@ -73,9 +92,6 @@ through as `xeP=`.
 | SRE Volume 31 / SRE Vol 31 Number  2 | 2 | 23–58 | 17 of 34 |
 | SRE Volume 33 / SRE Vol 33 Number 1 | 69, 70, 88, 89, 90 | i–26 | 11 of 26 |
 | SRE Volume 37 / SRE Volume 37 Number 2 | 1 | 23–58 | 25 of 34 |
-| SRE Volume 8 / SRE Vol 8 Number 4 | 75, 78, 83, 85, 92, 96 | 1–28 | 1 of 25 |
-| SRE Volume 9 / SRE Vol 9 Number 2 | 31, 32, 37, 38, 39, 43, 44, 45, 46, 47, 48 | 1–28 | 1 of 25 |
-| SRE Volume 9 / SRE Vol 9 Number 4 | 74, 75, 76, 80, 82, 84, 87, 91, 94 | 1–28 | 1 of 25 |
 
 ## 4. Could not be checked
 

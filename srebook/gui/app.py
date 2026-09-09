@@ -544,7 +544,16 @@ class App(ttk.Frame):
         key = (sheet, size)
         if key not in self.preview_cache:
             self.preview_cache.clear()   # one page at a time; these are large
-            image = source.convert("L").resize(size, Image.LANCZOS)
+            # Show the scan as it is. Forcing grey here made a colour
+            # collection look black and white in the one place the operator
+            # checks a page, and hid that the built PDF was grey too.
+            if source.mode == "RGBA":
+                flat = Image.new("RGB", source.size, (255, 255, 255))
+                flat.paste(source, mask=source.split()[3])
+                source = flat
+            elif source.mode not in ("L", "RGB"):
+                source = source.convert("RGB")
+            image = source.resize(size, Image.LANCZOS)
             self.preview_cache[key] = ImageTk.PhotoImage(image)
         self._shown_sheet = sheet
         self.preview.config(image=self.preview_cache[key], text="")
