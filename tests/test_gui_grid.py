@@ -579,3 +579,41 @@ def test_acknowledging_the_gap_is_remembered():
     g.acknowledge_gap()
 
     assert g.issue.gap_acknowledged is True
+
+
+# ------------------------------------------------------ stepping sheets ----
+# The outline lists articles, so a blank leaf appears nowhere in it. An
+# operator checking a scan for completeness needs to walk every sheet.
+
+def test_a_body_sheet_names_its_printed_page():
+    g = a_paginated_grid()
+
+    assert g.sheet_caption(3) == "Sheet 3 of 24 · printed page 27"
+
+
+def test_a_front_matter_sheet_says_it_carries_no_printed_number():
+    issue = Issue(title="SRE", body_starts_at_sheet=4, body_starts_at_printed=1)
+    g = grid.OutlineGrid(issue, sheet_count=28)
+
+    assert g.sheet_caption(2) == "Sheet 2 of 28 · front matter ii"
+
+
+def test_stepping_moves_one_sheet():
+    g = a_paginated_grid()
+
+    assert g.step_sheet(5, 1) == 6
+    assert g.step_sheet(5, -1) == 4
+
+
+def test_stepping_stops_at_the_first_and_last_sheet():
+    g = a_paginated_grid()
+
+    assert g.step_sheet(1, -1) == 1
+    assert g.step_sheet(24, 1) == 24
+
+
+def test_a_sheet_outside_the_issue_is_pulled_back_in():
+    g = a_paginated_grid()
+
+    assert g.step_sheet(99, 1) == 24
+    assert g.step_sheet(0, -1) == 1

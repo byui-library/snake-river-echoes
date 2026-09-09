@@ -249,6 +249,24 @@ class OutlineGrid:
         self.dirty = True
         return True
 
+    # ------------------------------------------------- stepping sheets ----
+
+    def sheet_caption(self, sheet: int) -> str:
+        """Which sheet is on screen, and what the book calls it.
+
+        The outline lists articles, so a leaf carrying none -- a blank inside
+        the cover, a full-page photograph -- appears nowhere in it. Walking the
+        sheets is the only way to confirm a scan is whole.
+        """
+        label = label_for_sheet(self.issue, sheet)
+        where = (f"printed page {label}" if sheet >= self.issue.body_starts_at_sheet
+                 else f"front matter {label}")
+        return f"Sheet {sheet} of {self.sheet_count} · {where}"
+
+    def step_sheet(self, sheet: int, delta: int) -> int:
+        """The next sheet in that direction, stopping at either end."""
+        return max(1, min(sheet + delta, self.sheet_count))
+
     # ------------------------------------------ pages not in the scan ----
 
     def missing_pages_text(self) -> str:

@@ -188,6 +188,23 @@ class App(ttk.Frame):
         # maximising the window actually enlarges the page.
         self.preview.bind("<Configure>", self._on_preview_resized)
 
+        # The outline lists articles, so a leaf carrying none -- a blank inside
+        # the cover, a full-page photograph -- appears nowhere in it. Walking
+        # the sheets is the only way to confirm a scan is whole.
+        stepper = ttk.Frame(preview_pane)
+        stepper.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        stepper.columnconfigure(1, weight=1)
+        self.prev_sheet_button = ttk.Button(stepper, text="◀ Previous sheet",
+                                            command=lambda: self.step_sheet(-1),
+                                            state="disabled")
+        self.prev_sheet_button.grid(row=0, column=0)
+        self.sheet_caption = ttk.Label(stepper, anchor="center", text="")
+        self.sheet_caption.grid(row=0, column=1, sticky="ew", padx=8)
+        self.next_sheet_button = ttk.Button(stepper, text="Next sheet ▶",
+                                            command=lambda: self.step_sheet(1),
+                                            state="disabled")
+        self.next_sheet_button.grid(row=0, column=2)
+
         buttons = self.button_bar = ttk.Frame(middle)
         buttons.grid(row=1, column=0, columnspan=3, sticky="w", pady=(8, 0))
         for text, command in (("Confirm", self.confirm_row),
@@ -315,6 +332,10 @@ class App(ttk.Frame):
 
         self.grid_model = OutlineGrid(issue, sheet_count=len(self.sheets))
         self._refresh_tree()
+        if self.sheets:
+            # Open on the cover, so the sheets can be walked without first
+            # having to find a bookmark to click.
+            self._show_sheet(1)
         self.build_button.config(state="normal")
 
         self.reanalyse_button.config(state="normal")
@@ -557,6 +578,22 @@ class App(ttk.Frame):
             self.preview_cache[key] = ImageTk.PhotoImage(image)
         self._shown_sheet = sheet
         self.preview.config(image=self.preview_cache[key], text="")
+        self._update_stepper(sheet)
+
+    def step_sheet(self, delta: int) -> None:
+        """Move one sheet, whether or not anything in the outline points at it."""
+        if not (self.grid_model and self.sheets):
+            return
+        current = getattr(self, "_shown_sheet", None) or 1
+        self._show_sheet(self.grid_model.step_sheet(current, delta))
+
+    def _update_stepper(self, sheet: int) -> None:
+        if not self.grid_model:
+            return
+        self.sheet_caption.config(text=self.grid_model.sheet_caption(sheet))
+        self.prev_sheet_button.config(state="normal" if sheet > 1 else "disabled")
+        self.next_sheet_button.config(
+            state="normal" if sheet < len(self.sheets) else "disabled")
 
     def _on_preview_resized(self, _event) -> None:
         """Re-render at the new size, once the operator stops dragging."""

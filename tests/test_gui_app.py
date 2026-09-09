@@ -358,3 +358,49 @@ def test_a_bookmark_waiting_on_an_unscanned_page_is_counted_separately():
         assert "1 need" in status or "1 needs" in status, status
     finally:
         root.destroy()
+
+
+# ----------------------------------------------------- stepping sheets ----
+
+def test_the_stepper_walks_sheets_the_outline_never_mentions():
+    """Vol 4 No 1's sheet 2 is a blank inside the cover. No bookmark points at
+    it, so it could not be reached from the list at all."""
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Bookmark, Issue
+    from srebook.gui.app import App
+    from srebook.gui.grid import OutlineGrid
+    try:
+        app = App(root)
+        app.sheets = [None] * 28
+        app.grid_model = OutlineGrid(
+            Issue(body_starts_at_sheet=4, body_starts_at_printed=1,
+                  bookmarks=[Bookmark("Front Cover", 1)]), sheet_count=28)
+        app._update_stepper(1)
+        assert "Sheet 1 of 28" in app.sheet_caption["text"]
+
+        app._update_stepper(2)
+
+        assert app.sheet_caption["text"] == "Sheet 2 of 28 · front matter ii"
+    finally:
+        root.destroy()
+
+
+def test_the_stepper_stops_at_the_ends():
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Issue
+    from srebook.gui.app import App
+    from srebook.gui.grid import OutlineGrid
+    try:
+        app = App(root)
+        app.sheets = [None] * 4
+        app.grid_model = OutlineGrid(Issue(), sheet_count=4)
+
+        app._update_stepper(1)
+        assert str(app.prev_sheet_button["state"]) == "disabled"
+        assert str(app.next_sheet_button["state"]) == "normal"
+
+        app._update_stepper(4)
+        assert str(app.prev_sheet_button["state"]) == "normal"
+        assert str(app.next_sheet_button["state"]) == "disabled"
+    finally:
+        root.destroy()
