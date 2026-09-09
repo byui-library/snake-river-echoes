@@ -185,7 +185,7 @@ Then double-click `dist/clean-test.wsb` to run the whole thing in Windows Sandbo
   without re-OCRing. **Never run `draft --force` across these** — it overwrites the
   operator's saved reviews, which are not in git. To inspect detection, call
   `outline.detect_body_start` on `pipeline._sheet_text` output; that writes nothing.
-  Current code detects (1,1), (1,27), (1,49), (1,73) on the four — correct for all.
+  Current code detects (1,1), (1,25), (1,49), (1,73) on the four — correct for all.
 
 ## Delivery phases
 

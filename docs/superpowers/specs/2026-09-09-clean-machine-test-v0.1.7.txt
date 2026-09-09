@@ -1,0 +1,85 @@
+SRE Book Builder - clean machine test
+Started Wed 09/09/2026  8:32:46.31
+
+=== 1. Confirm the machine really is clean ===
+  [ok]   no python on PATH
+  [ok]   no tesseract on PATH
+  [ok]   no system Tesseract installation
+
+=== 2. Install ===
+running C:\install\SREBookBuilder-0.1.7-setup.exe
+  [ok]   installer completed
+  [ok]   the window is installed
+  [ok]   the command line is installed
+  [ok]   Tesseract was bundled
+  [ok]   English language data present
+  [ok]   tessdata\configs\hocr present
+
+=== 3. Does it know what it is? ===
+SRE Book Builder
+  running     packaged
+  python      3.13.15
+  Pillow      12.3.0
+  pikepdf     10.12.0
+  lxml        5.3.0
+  tesseract   bundled
+              C:\Users\WDAGUtilityAccount\AppData\Local\Programs\SRE Book Builder\vendor\tesseract\tesseract.exe
+  languages   eng
+  [ok]   doctor passed
+  [ok]   using its OWN Tesseract, not one from the host
+  [ok]   reporting itself as a packaged build
+
+=== 4. Build a real issue ===
+copied scans to a writable folder
+  OCR 1/22  SRE_1971_Vol1_No1_01.tif                  OCR 2/22  SRE_1971_Vol1_No1_02.tif                  OCR 3/22  SRE_1971_Vol1_No1_03.tif                  OCR 4/22  SRE_1971_Vol1_No1_04.tif                  OCR 5/22  SRE_1971_Vol1_No1_05.tif                  OCR 6/22  SRE_1971_Vol1_No1_06.tif                  OCR 7/22  SRE_1971_Vol1_No1_07.tif                  OCR 8/22  SRE_1971_Vol1_No1_08.tif                  OCR 9/22  SRE_1971_Vol1_No1_09.tif                  OCR 10/22  SRE_1971_Vol1_No1_10.tif                  OCR 11/22  SRE_1971_Vol1_No1_11.tif                  OCR 12/22  SRE_1971_Vol1_No1_12.tif                  OCR 13/22  SRE_1971_Vol1_No1_13.tif                  OCR 14/22  SRE_1971_Vol1_No1_14.tif                  OCR 15/22  SRE_1971_Vol1_No1_15.tif                  OCR 16/22  SRE_1971_Vol1_No1_16.tif                  OCR 17/22  SRE_1971_Vol1_No1_17.tif                  OCR 18/22  SRE_1971_Vol1_No1_18.tif                  OCR 19/22  SRE_1971_Vol1_No1_19.tif                  OCR 20/22  SRE_1971_Vol1_No1_20.tif                  OCR 21/22  SRE_1971_Vol1_No1_21.tif                  OCR 22/22  SRE_1971_Vol1_No1_22.tif                  OCR 22/22 complete                                  
+
+Drafted SRE_1971_Vol1_No1.srebook.json
+  Issue        Vol. 1, No. 1 (1971)
+  Page labels  sheet 1 is printed page 1
+  Bookmarks    13
+      sheet   1  Front Cover
+      sheet   2  Table of Contents
+      sheet   3  A Goal Is Achieved
+      sheet   4  Oral History
+      sheet   7  Eastern Idaho History Fair - 1971
+      sheet   8  A Brief Autobiography and Accumulative History
+      sheet  11  Who and What in Idaho
+      sheet  11  Andrew Henry
+      sheet  19  My Home in Idaho
+      sheet  21  The Grand Old Snake
+      sheet  22  Upper Snake River Valley Historical Society
+      sheet  22  Board of Directors
+      sheet   1  Idaho Poetry
+
+  These could not be located in the body, so their sheet is a guess.
+  Give them a page number before building:
+      Idaho Poetry
+
+  These are printed in the issue but not listed on the contents
+  page. Keep or remove each one before building:
+      sheet  19  My Home in Idaho
+      sheet  21  The Grand Old Snake
+      sheet  22  Upper Snake River Valley Historical Society
+      sheet  22  Board of Directors
+
+Review C:\work\output\SRE_1971_Vol1_No1.srebook.json
+then run:  srebook build "C:\work"
+  [ok]   draft completed
+building with --force (unattended: no operator reviewed the draft)
+  OCR 1/22  SRE_1971_Vol1_No1_01.tif                  OCR 2/22  SRE_1971_Vol1_No1_02.tif                  OCR 3/22  SRE_1971_Vol1_No1_03.tif                  OCR 4/22  SRE_1971_Vol1_No1_04.tif                  OCR 5/22  SRE_1971_Vol1_No1_05.tif                  OCR 6/22  SRE_1971_Vol1_No1_06.tif                  OCR 7/22  SRE_1971_Vol1_No1_07.tif                  OCR 8/22  SRE_1971_Vol1_No1_08.tif                  OCR 9/22  SRE_1971_Vol1_No1_09.tif                  OCR 10/22  SRE_1971_Vol1_No1_10.tif                  OCR 11/22  SRE_1971_Vol1_No1_11.tif                  OCR 12/22  SRE_1971_Vol1_No1_12.tif                  OCR 13/22  SRE_1971_Vol1_No1_13.tif                  OCR 14/22  SRE_1971_Vol1_No1_14.tif                  OCR 15/22  SRE_1971_Vol1_No1_15.tif                  OCR 16/22  SRE_1971_Vol1_No1_16.tif                  OCR 17/22  SRE_1971_Vol1_No1_17.tif                  OCR 18/22  SRE_1971_Vol1_No1_18.tif                  OCR 19/22  SRE_1971_Vol1_No1_19.tif                  OCR 20/22  SRE_1971_Vol1_No1_20.tif                  OCR 21/22  SRE_1971_Vol1_No1_21.tif                  OCR 22/22  SRE_1971_Vol1_No1_22.tif                  OCR 22/22 complete                                  
+
+Built SRE_1971_Vol1_No1.pdf
+  C:\work\output\SRE_1971_Vol1_No1.pdf
+  9.96 MB, 13 bookmarks
+  [ok]   build completed
+  [ok]   produced SRE_1971_Vol1_No1.pdf  (9964986 bytes)
+
+=== 5. Notice an issue that is missing pages ===
+  [ok]   read the issue with the gap
+  [ok]   warned that pages are missing from the scan
+  [ok]   named the missing pages: 28, 29
+  [ok]   numbered the cover 25, as the pages do
+
+=== Result ===
+RESULT: PASS - the installer works on a machine with nothing on it
+Finished Wed 09/09/2026  8:34:58.21

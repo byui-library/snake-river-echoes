@@ -70,7 +70,7 @@ class App(ttk.Frame):
         self.folder_note.grid(row=1, column=1, sticky="w", padx=6, pady=(2, 8))
 
         # --- metadata ---
-        meta = ttk.LabelFrame(self, text="Issue", padding=8)
+        meta = self.meta_frame = ttk.LabelFrame(self, text="Issue", padding=8)
         meta.grid(row=1, column=0, sticky="ew", pady=(0, 8))
         meta.columnconfigure(1, weight=1)
 
@@ -188,7 +188,7 @@ class App(ttk.Frame):
         # maximising the window actually enlarges the page.
         self.preview.bind("<Configure>", self._on_preview_resized)
 
-        buttons = ttk.Frame(middle)
+        buttons = self.button_bar = ttk.Frame(middle)
         buttons.grid(row=1, column=0, columnspan=3, sticky="w", pady=(8, 0))
         for text, command in (("Confirm", self.confirm_row),
                               ("Add", self.add_row), ("Remove", self.remove_row),
@@ -203,11 +203,16 @@ class App(ttk.Frame):
         bottom.columnconfigure(1, weight=1)
         self.progress = ttk.Progressbar(bottom, mode="determinate", length=220)
         self.progress.grid(row=0, column=0, sticky="w")
-        self.status = ttk.Label(bottom, text="")
-        self.status.grid(row=0, column=1, sticky="w", padx=10)
         self.build_button = ttk.Button(bottom, text="Build PDF", command=self.build,
                                        state="disabled")
         self.build_button.grid(row=0, column=2, sticky="e")
+        # Its own row, wrapping: this line now counts three kinds of unfinished
+        # work and was being cut off mid-word between the bar and the button,
+        # which lost the very count the operator needed.
+        self.status = ttk.Label(bottom, text="", justify="left")
+        self.status.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(6, 0))
+        bottom.bind("<Configure>",
+                    lambda e: self.status.config(wraplength=max(e.width - 8, 200)))
 
     # ---------------------------------------------------- folder + OCR ----
 

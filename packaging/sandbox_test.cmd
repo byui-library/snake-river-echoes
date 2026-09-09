@@ -25,8 +25,13 @@ call :forbid_cmd  tesseract                                  "no tesseract on PA
 call :forbid_file "C:\Program Files\Tesseract-OCR\tesseract.exe" "no system Tesseract installation"
 
 call :section "2. Install"
+REM Newest by date, not last alphabetically. Several builds sit in dist, and
+REM the alphabetical last is only the newest by luck: 0.1.10 sorts before
+REM 0.1.5, so the test would install 0.1.9 and report it as passing.
 set SETUP=
-for %%F in (C:\install\SREBookBuilder-*-setup.exe) do set SETUP=%%F
+for /f "delims=" %%F in ('dir /b /o-d C:\install\SREBookBuilder-*-setup.exe 2^>nul') do (
+    if not defined SETUP set SETUP=C:\install\%%F
+)
 if not defined SETUP call :fail "no installer found in C:\install"
 if not defined SETUP goto :summary
 call :note "running %SETUP%"

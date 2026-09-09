@@ -39,9 +39,6 @@ issue. You can fill in the issue details while it works.
 
 ![Most of this is filled in from the file names.](images/issue-panel.png)
 
-*This picture predates the "Pages missing from this scan" box, which now sits
-below the page-number row.*
-
 Correct anything wrong. Two settings are worth a second look:
 
 > **Sheet ⟨1⟩ is printed page ⟨49⟩**
@@ -126,9 +123,10 @@ is left out of the PDF. Scan the page, build again, and it takes its place. See
 | **→ Indent** | Tucks a bookmark under the one above, for poems inside a poetry section |
 | **← Outdent** | Brings it back out to the top level |
 
-**The program will not build until every red bookmark is dealt with.** That is
+**The program will not build until the first two kinds are dealt with.** That is
 deliberate: a bookmark that jumps to the wrong page is worse than no bookmark,
-because a reader has no way to tell.
+because a reader has no way to tell. The third kind — waiting on a page that was
+never scanned — is not yours to fix and does not hold up a build.
 
 ### Finding the right page
 
