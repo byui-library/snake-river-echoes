@@ -128,7 +128,7 @@ is left out of the PDF. Scan the page, build again, and it takes its place. See
 | Button | What it does |
 |---|---|
 | **Confirm** | Accepts the selected bookmark as it stands |
-| **Add** | A new bookmark, for something the program missed entirely |
+| **Add** | A new bookmark on the sheet you are looking at, for something the program missed entirely |
 | **Remove** | Deletes the selected bookmark |
 | **↑ ↓** | Moves a bookmark up or down the list |
 | **Merge up** | Joins the selected bookmark onto the one above it, for an article split into a title and a byline |

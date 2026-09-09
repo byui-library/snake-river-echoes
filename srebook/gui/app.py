@@ -153,6 +153,9 @@ class App(ttk.Frame):
         list_pane = ttk.Frame(self.split)
         list_pane.columnconfigure(0, weight=1)
         list_pane.rowconfigure(0, weight=1)
+        # An even split. The list was getting a third of the window, which was
+        # narrower than its own columns, so long titles were cut off before the
+        # operator could read them. Drag the divider to favour either side.
         self.split.add(list_pane, weight=1)
 
         # Printed page first: it is the number the contents page gives, and
@@ -163,9 +166,15 @@ class App(ttk.Frame):
         self.tree.heading("#0", text="Title")
         self.tree.heading("printed", text="Printed page")
         self.tree.heading("sheet", text="Sheet")
-        self.tree.column("#0", width=300, minwidth=120)
-        self.tree.column("printed", width=88, minwidth=70, anchor="center")
-        self.tree.column("sheet", width=58, minwidth=50, anchor="center")
+        # Only the title stretches. The two number columns are as wide as three
+        # digits ever need, so every pixel the window gains goes to the title --
+        # which is the thing being read, and which these issues make long:
+        # "The Collection of Historical Documents: A Citizens Responsibility".
+        self.tree.column("#0", width=430, minwidth=180, stretch=True)
+        self.tree.column("printed", width=86, minwidth=70, anchor="center",
+                         stretch=False)
+        self.tree.column("sheet", width=56, minwidth=50, anchor="center",
+                         stretch=False)
         self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree.tag_configure("attention", foreground="#a33")
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
@@ -178,7 +187,7 @@ class App(ttk.Frame):
         preview_pane = ttk.Frame(self.split)
         preview_pane.columnconfigure(0, weight=1)
         preview_pane.rowconfigure(0, weight=1)
-        self.split.add(preview_pane, weight=2)
+        self.split.add(preview_pane, weight=1)
 
         self.preview = ttk.Label(preview_pane, relief="sunken", anchor="center",
                                  text="Select a bookmark\nto see its sheet",
@@ -193,17 +202,21 @@ class App(ttk.Frame):
         # the sheets is the only way to confirm a scan is whole.
         stepper = ttk.Frame(preview_pane)
         stepper.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        stepper.columnconfigure(0, weight=1)
         stepper.columnconfigure(1, weight=1)
-        self.prev_sheet_button = ttk.Button(stepper, text="◀ Previous sheet",
+        # The caption gets its own row: beside the buttons it was clipped to
+        # "Sheet 1 of 36 ·", losing the part that says what the sheet is.
+        self.sheet_caption = ttk.Label(stepper, anchor="center", text="")
+        self.sheet_caption.grid(row=0, column=0, columnspan=2, sticky="ew",
+                                pady=(0, 4))
+        self.prev_sheet_button = ttk.Button(stepper, text="◀ Previous",
                                             command=lambda: self.step_sheet(-1),
                                             state="disabled")
-        self.prev_sheet_button.grid(row=0, column=0)
-        self.sheet_caption = ttk.Label(stepper, anchor="center", text="")
-        self.sheet_caption.grid(row=0, column=1, sticky="ew", padx=8)
-        self.next_sheet_button = ttk.Button(stepper, text="Next sheet ▶",
+        self.prev_sheet_button.grid(row=1, column=0, sticky="e", padx=(0, 3))
+        self.next_sheet_button = ttk.Button(stepper, text="Next ▶",
                                             command=lambda: self.step_sheet(1),
                                             state="disabled")
-        self.next_sheet_button.grid(row=0, column=2)
+        self.next_sheet_button.grid(row=1, column=1, sticky="w", padx=(3, 0))
 
         buttons = self.button_bar = ttk.Frame(middle)
         buttons.grid(row=1, column=0, columnspan=3, sticky="w", pady=(8, 0))
@@ -469,9 +482,17 @@ class App(ttk.Frame):
             if remaining else "All bookmarks confirmed. Ready to build.")
 
     def add_row(self) -> None:
+        """Add a bookmark on the sheet currently on screen.
+
+        The operator steps to the page an article starts on and then clicks
+        Add. Defaulting to sheet 1 selected the new row, which threw the
+        preview back to the cover -- so the page they were looking at was gone
+        before they could type the title, and the sheet number was wrong too.
+        """
         if not self.grid_model:
             return
-        self._refresh_tree(self.grid_model.add(title="New bookmark", sheet=1))
+        sheet = getattr(self, "_shown_sheet", None) or 1
+        self._refresh_tree(self.grid_model.add(title="New bookmark", sheet=sheet))
         self._autosave()
 
     def remove_row(self) -> None:

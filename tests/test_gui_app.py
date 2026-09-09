@@ -428,3 +428,63 @@ def test_the_window_merges_the_selected_bookmark_into_the_one_above():
         assert app.tree.item("0", "text") == "The Rigby Star: 79 Years By A.R. Chandler"
     finally:
         root.destroy()
+
+
+def test_only_the_title_column_takes_the_extra_width():
+    """The page numbers never need more than three digits. Letting them stretch
+    spends width the long titles in this journal need."""
+    _tk, root = _tk_or_skip()
+    from srebook.gui.app import App
+    try:
+        app = App(root)
+
+        assert app.tree.column("#0", "stretch") == 1
+        assert app.tree.column("printed", "stretch") == 0
+        assert app.tree.column("sheet", "stretch") == 0
+        assert int(app.tree.column("#0", "width")) >= 400
+    finally:
+        root.destroy()
+
+
+def test_adding_a_bookmark_uses_the_sheet_on_screen():
+    """The operator steps to the page an article starts on, then clicks Add.
+    Defaulting to sheet 1 threw the preview back to the cover, so the page
+    they were looking at was gone before they could type the title."""
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Bookmark, Issue
+    from srebook.gui.app import App
+    from srebook.gui.grid import OutlineGrid
+    try:
+        app = App(root)
+        app.sheets = [None] * 36
+        app.grid_model = OutlineGrid(
+            Issue(body_starts_at_sheet=1, body_starts_at_printed=21,
+                  bookmarks=[Bookmark("Front Cover", 1)]), sheet_count=36)
+        app.folder = None
+        app._refresh_tree()
+        app._shown_sheet = 14        # stepped to the page in question
+
+        app.add_row()
+
+        assert app.grid_model.rows[-1].sheet == 14
+        assert app._shown_sheet == 14
+    finally:
+        root.destroy()
+
+
+def test_adding_a_bookmark_before_any_page_is_shown_still_works():
+    _tk, root = _tk_or_skip()
+    from srebook.core.model import Issue
+    from srebook.gui.app import App
+    from srebook.gui.grid import OutlineGrid
+    try:
+        app = App(root)
+        app.sheets = [None] * 8
+        app.grid_model = OutlineGrid(Issue(), sheet_count=8)
+        app.folder = None
+
+        app.add_row()
+
+        assert app.grid_model.rows[-1].sheet == 1
+    finally:
+        root.destroy()
