@@ -488,3 +488,50 @@ def test_adding_a_bookmark_before_any_page_is_shown_still_works():
         assert app.grid_model.rows[-1].sheet == 1
     finally:
         root.destroy()
+
+
+# ---------------------------------------------------- the edit prompt ----
+
+def test_the_title_prompt_is_wide_enough_to_read_a_title():
+    """tkinter's askstring is a fixed narrow field whatever it holds, so a
+    title with its author merged on could not be read while being edited."""
+    _tk, root = _tk_or_skip()
+    from srebook.gui.app import TITLE_ENTRY_CHARS, TextPrompt
+    try:
+        prompt = TextPrompt(root, "Bookmark title", "Title",
+                            "Jefferson Historical Society Seeks To Preserve "
+                            "County Heritage By Thelma McMurtrey")
+        assert int(prompt.entry["width"]) == TITLE_ENTRY_CHARS
+        assert TITLE_ENTRY_CHARS >= 60
+        prompt.destroy()
+    finally:
+        root.destroy()
+
+
+def test_a_number_prompt_stays_narrow():
+    _tk, root = _tk_or_skip()
+    from srebook.gui.app import NUMBER_ENTRY_CHARS, TextPrompt
+    try:
+        prompt = TextPrompt(root, "Sheet number", "Which scan?", "14",
+                            width=NUMBER_ENTRY_CHARS)
+        assert int(prompt.entry["width"]) == NUMBER_ENTRY_CHARS
+        prompt.destroy()
+    finally:
+        root.destroy()
+
+
+def test_the_prompt_returns_what_was_typed_and_nothing_on_cancel():
+    _tk, root = _tk_or_skip()
+    from srebook.gui.app import TextPrompt
+    try:
+        accepted = TextPrompt(root, "t", "p", "before")
+        accepted.var.set("after")
+        accepted._accept()
+        assert accepted.value == "after"
+
+        cancelled = TextPrompt(root, "t", "p", "before")
+        cancelled.var.set("after")
+        cancelled._cancel()
+        assert cancelled.value is None
+    finally:
+        root.destroy()

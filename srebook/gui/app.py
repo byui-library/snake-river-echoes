@@ -26,6 +26,69 @@ MIN_PREVIEW = 40          # below this the pane is not laid out yet
 RESIZE_SETTLE_MS = 120    # re-render after dragging stops, not during
 QUALITY_CHOICES = {"Small (150 DPI)": 150, "Balanced (200 DPI)": 200,
                    "High (300 DPI)": 300}
+TITLE_ENTRY_CHARS = 72    # long enough for a title with its author merged on
+NUMBER_ENTRY_CHARS = 10
+
+
+class TextPrompt(tk.Toplevel):
+    """A modal one-field prompt, sized to what it is asking for.
+
+    Built as a class rather than reusing tkinter's askstring because that has
+    a fixed narrow field: the operator could not see the title being edited.
+    Widgets are laid out in __init__ and the waiting happens in show(), so the
+    layout can be tested without a modal loop blocking the test.
+    """
+
+    def __init__(self, parent: tk.Misc, title: str, prompt: str,
+                 initial: str, width: int = TITLE_ENTRY_CHARS):
+        super().__init__(parent)
+        self.title(title)
+        self.value: str | None = None
+        self.transient(parent)
+        self.resizable(True, False)
+
+        frame = ttk.Frame(self, padding=12)
+        frame.pack(fill="both", expand=True)
+        frame.columnconfigure(0, weight=1)
+
+        ttk.Label(frame, text=prompt, justify="left").grid(
+            row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+
+        self.var = tk.StringVar(value=initial)
+        self.entry = ttk.Entry(frame, textvariable=self.var, width=width)
+        self.entry.grid(row=1, column=0, columnspan=2, sticky="ew")
+
+        buttons = ttk.Frame(frame)
+        buttons.grid(row=2, column=0, columnspan=2, sticky="e", pady=(12, 0))
+        ttk.Button(buttons, text="OK", command=self._accept).pack(side="left", padx=(0, 6))
+        ttk.Button(buttons, text="Cancel", command=self._cancel).pack(side="left")
+
+        self.bind("<Return>", lambda _e: self._accept())
+        self.bind("<Escape>", lambda _e: self._cancel())
+        self.protocol("WM_DELETE_WINDOW", self._cancel)
+
+    def _accept(self) -> None:
+        self.value = self.var.get()
+        self.destroy()
+
+    def _cancel(self) -> None:
+        self.value = None
+        self.destroy()
+
+    def show(self) -> str | None:
+        # The whole title selected, so typing replaces it and Home/End still
+        # reach either edge of a long one.
+        self.entry.focus_set()
+        self.entry.select_range(0, "end")
+        self.entry.icursor("end")
+        self.update_idletasks()
+        parent = self.master.winfo_toplevel()
+        x = parent.winfo_rootx() + (parent.winfo_width() - self.winfo_width()) // 2
+        y = parent.winfo_rooty() + (parent.winfo_height() - self.winfo_height()) // 3
+        self.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        self.grab_set()
+        self.wait_window(self)
+        return self.value
 
 
 class App(ttk.Frame):
@@ -550,7 +613,8 @@ class App(ttk.Frame):
                 "Printed page",
                 f'What page number is printed on the page where "{row.title}"\n'
                 "starts? This is the number the contents page gives.",
-                self.grid_model.printed_display(index).replace("—", ""))
+                self.grid_model.printed_display(index).replace("—", ""),
+                width=NUMBER_ENTRY_CHARS)
             if value and value.isdigit():
                 if not self.grid_model.set_printed_text(index, value):
                     labels = self.grid_model.page_label_range()
@@ -566,19 +630,28 @@ class App(ttk.Frame):
                         "numbered i, ii, iii.")
         elif column == "#2":
             value = self._ask("Sheet number", f'Which scan does "{row.title}" start on?',
-                              str(row.sheet))
+                              str(row.sheet), width=NUMBER_ENTRY_CHARS)
             if value and value.isdigit():
                 self.grid_model.edit(index, sheet=int(value))
         else:
-            value = self._ask("Bookmark title", "Title", row.title)
+            value = self._ask("Bookmark title",
+                              "Title — the whole line is selected, so typing "
+                              "replaces it", row.title)
             if value is not None:
                 self.grid_model.edit(index, title=value)
         self._refresh_tree(index)
         self._autosave()
 
-    def _ask(self, title: str, prompt: str, initial: str) -> str | None:
-        from tkinter import simpledialog
-        return simpledialog.askstring(title, prompt, initialvalue=initial, parent=self)
+    def _ask(self, title: str, prompt: str, initial: str,
+             width: int = TITLE_ENTRY_CHARS) -> str | None:
+        """Ask for one value, in a box wide enough to hold it.
+
+        tkinter's own askstring is a fixed narrow field whatever it contains,
+        so an article title -- and this journal writes them long, with the
+        author's name merged on -- could not be read while it was being
+        edited.
+        """
+        return TextPrompt(self, title, prompt, initial, width).show()
 
     # -------------------------------------------------------- preview ----
 
