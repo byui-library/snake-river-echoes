@@ -827,3 +827,29 @@ def test_a_missing_bookmark_cannot_be_confirmed_into_the_pdf():
 
     assert g.needs_attention(0), "it must not look settled"
     assert g.rows[0].review_reason == "missing"
+
+
+def test_a_bookmark_waiting_on_an_unscanned_page_never_looks_settled():
+    """Assembly omits it whatever the flag says. Any state where the list
+    calls it settled and the PDF drops it is a bookmark lost in silence --
+    retitling one reached exactly that state."""
+    g = a_paginated_grid([Bookmark("Battle", 1, needs_review=True,
+                                   review_reason="missing", missing_page=28)])
+
+    g.edit(0, title="The Battle of Pierre's Hole")
+
+    assert g.rows[0].review_reason == "missing"
+    assert g.needs_attention(0), "it must not look settled"
+
+
+def test_the_flag_and_the_reason_cannot_disagree():
+    """One question, one answer: a row is settled only once nothing marks it."""
+    for action in (lambda g: g.edit(0, title="Retitled"),
+                   lambda g: g.confirm(0),
+                   lambda g: g.set_printed_text(0, "nonsense")):
+        g = a_paginated_grid([Bookmark("Battle", 1, needs_review=True,
+                                       review_reason="missing", missing_page=28)])
+        action(g)
+        settled = not g.needs_attention(0)
+        publishable = g.rows[0].review_reason != "missing"
+        assert settled == publishable, f"{action} left them disagreeing"

@@ -135,7 +135,11 @@ class OutlineGrid:
             row.review_reason = ""
             row.missing_page = None
         # The operator has looked at it; that is what the flag was waiting for.
-        row.needs_review = False
+        # Except while a page is still not in the scan: retitling one does not
+        # make it publishable, and clearing the flag made it look settled while
+        # assembly went on dropping it.
+        if row.review_reason != "missing":
+            row.needs_review = False
         self.dirty = True
 
     def confirm(self, index: int) -> None:
@@ -261,8 +265,15 @@ class OutlineGrid:
         return validate(issue, self.sheet_count)
 
     def needs_attention(self, index: int) -> bool:
-        """A title the parser could not place. Valid, but unreviewed."""
-        return self.rows[index].needs_review
+        """Anything still marked: unplaced, suggested, or waiting on a page.
+
+        Assembly omits a bookmark whose reason is "missing" whatever the flag
+        says, so a row carrying that reason must never look settled. Two fields
+        answering one question is how a repaired bookmark vanished from a book
+        without a word.
+        """
+        row = self.rows[index]
+        return row.needs_review or row.review_reason == "missing"
 
     def sheet_display(self, index: int) -> str:
         """What to show in the Sheet column.
