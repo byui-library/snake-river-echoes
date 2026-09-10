@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
@@ -31,6 +32,53 @@ def _normalise_title(title: str) -> str:
 
 class PipelineError(Exception):
     """The issue cannot be processed as asked, in terms a person can act on."""
+
+
+@dataclass
+class ScanAssessment:
+    """What the printed pages say about whether this scan is whole."""
+    anchor: tuple[int, int] | None
+    folios: dict[int, int]
+    body_sheets: int
+    gaps: list[int]              # from the folios: a hole in the middle
+    cited: list[int]
+    cited_but_absent: list[int]  # from the contents page: missing off the end
+    numbering_readable: bool
+
+    @property
+    def missing_pages(self) -> list[int]:
+        return sorted(set(self.gaps) | set(self.cited_but_absent))
+
+
+def assess_scan(front_matter: list[str], body: dict[int, list[str]],
+                sheet_count: int) -> ScanAssessment:
+    """Read the printed page numbers and say which pages are not here.
+
+    Order matters, which is why this is one function rather than a sequence
+    each caller repeats. The folio gaps decide the labels, and the labels
+    decide which cited pages are absent; doing it the other way round measures
+    an offset across the hole and names the wrong pages.
+
+    `draft` and `packaging/survey_scans.py` both call this. They had the same
+    seven steps written out separately, and the survey is what produces the
+    report an archivist rescans from.
+    """
+    anchor = outline.detect_body_start(body)
+    issue = Issue()
+    if anchor:
+        issue.body_starts_at_sheet, issue.body_starts_at_printed = anchor
+
+    folios = outline.printed_folios(body)
+    gaps = outline.detect_gaps(folios)
+    issue.missing_pages = gaps
+
+    readable = outline.numbering_is_readable(folios, len(body))
+    cited = outline.cited_pages(front_matter)
+    absent = outline.pages_not_in_scan(cited, page_labels(issue, sheet_count),
+                                       numbering_known=readable)
+    return ScanAssessment(anchor=anchor, folios=folios, body_sheets=len(body),
+                          gaps=gaps, cited=cited, cited_but_absent=absent,
+                          numbering_readable=readable)
 
 
 # ------------------------------------------------------------------ paths ----
@@ -214,14 +262,8 @@ def draft(folder: Path, embed_dpi: int = 200, overwrite: bool = False,
     # the middle of an issue -- Vol 1 No 2's sheet 3 prints 27 and sheet 4
     # prints 30 -- while the contents citations catch pages missing off the
     # end, where there is no following folio to reveal a jump.
-    # Order matters. The folio gaps decide the labels, and the labels decide
-    # which cited pages are absent -- doing it the other way round measures an
-    # offset across the hole and reports the wrong pages.
-    folios = outline.printed_folios(body)
-    issue.missing_pages = outline.detect_gaps(folios)
-    issue.missing_pages = sorted(set(issue.missing_pages) | set(
-        outline.pages_not_in_scan(outline.cited_pages(front_matter),
-                                  page_labels(issue, len(sheets)))))
+    scan = assess_scan(front_matter, body, len(sheets))
+    issue.missing_pages = scan.missing_pages
 
     # An entry the parser could not place, whose page the scan does not
     # contain, is not the operator's to fix: there is nothing to point it at

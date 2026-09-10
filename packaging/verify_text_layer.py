@@ -29,12 +29,14 @@ sys.path.insert(0, str(ROOT))
 
 import pypdfium2 as pdfium                            # noqa: E402
 
-from srebook.core import ocr, pipeline                # noqa: E402
+from srebook.core import ocr, pipeline               # noqa: E402
+# Imported, never copied: a harness calibrated from its own constants keeps
+# reporting PASS after the value under test changes, which is the one thing
+# this check exists to prevent.
+from srebook.core.assemble import OCR_DPI            # noqa: E402
 
-OCR_DPI = 300
 PT_PER_PX = 72.0 / OCR_DPI
 PAD_PT = 1.5          # a word's box is tight; allow a little either side
-MIN_CONFIDENCE = 30   # the same floor the text layer itself uses
 
 
 def normalise(text: str) -> str:
@@ -70,10 +72,10 @@ def verify(folder: Path) -> int:
         hocr = cache / f"{sheet.stem}.hocr"
         if not hocr.exists():
             continue
+        # parse_hocr has already dropped anything below ocr.MIN_CONFIDENCE.
         # A word of pure punctuation normalises to nothing, so there is no
-        # letter to locate. Counting it as a miss understates the result.
-        words = [w for w in ocr.parse_hocr(hocr.read_bytes())
-                 if w.confidence >= MIN_CONFIDENCE and normalise(w.text)]
+        # letter to locate; counting it as a miss understates the result.
+        words = [w for w in ocr.parse_hocr(hocr.read_bytes()) if normalise(w.text)]
         if not words:
             continue
 

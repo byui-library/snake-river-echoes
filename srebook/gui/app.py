@@ -16,7 +16,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageTk
 
-from ..core import ingest, pipeline
+from ..core import ingest, pipeline, prepare
 from ..core.model import Issue
 from . import preview
 from .grid import OutlineGrid
@@ -24,6 +24,7 @@ from .grid import OutlineGrid
 PREVIEW_MARGIN = 8        # breathing room inside the sunken border
 MIN_PREVIEW = 40          # below this the pane is not laid out yet
 RESIZE_SETTLE_MS = 120    # re-render after dragging stops, not during
+PREVIEW_CACHE_SIZE = 5    # ~2 MB each; enough to step back and forth freely
 QUALITY_CHOICES = {"Small (150 DPI)": 150, "Balanced (200 DPI)": 200,
                    "High (300 DPI)": 300}
 TITLE_ENTRY_CHARS = 72    # long enough for a title with its author merged on
@@ -98,6 +99,10 @@ class App(ttk.Frame):
         self.sheets: list[Path] = []
         self.grid_model: OutlineGrid | None = None
         self.preview_cache: dict[tuple[int, tuple[int, int]], ImageTk.PhotoImage] = {}
+        self._sheet_sizes: dict[int, tuple[int, int]] = {}
+        # Declared here like every other piece of state; three readers were
+        # defending against its absence with getattr.
+        self._shown_sheet: int | None = None
         self.events: queue.Queue = queue.Queue()
         self.busy = False
         # Set while the page-label fields are being filled in from a freshly
@@ -297,8 +302,10 @@ class App(ttk.Frame):
                               ("Undo", self.undo),
                               ("↑", self.move_up), ("↓", self.move_down),
                               ("→ Indent", self.indent), ("← Outdent", self.outdent)):
-            ttk.Button(buttons, text=text, command=command, width=9).pack(
-                side="left", padx=(0, 4))
+            # Wide enough for the longest label: at 9 characters "Outdent"
+            # lost its final letter once the bar gained Merge up and Undo.
+            ttk.Button(buttons, text=text, command=command, width=10).pack(
+                side="left", padx=(0, 3))
 
         # --- status + build ---
         bottom = ttk.Frame(self)
@@ -561,7 +568,7 @@ class App(ttk.Frame):
         """
         if not self.grid_model:
             return
-        sheet = getattr(self, "_shown_sheet", None) or 1
+        sheet = self._shown_sheet or 1
         self._refresh_tree(self.grid_model.add(title="New bookmark", sheet=sheet))
         self._autosave()
 
@@ -683,6 +690,15 @@ class App(ttk.Frame):
             return
         self._show_sheet(sheet)
 
+    def _sheet_size(self, sheet: int) -> tuple[int, int]:
+        """The scan's pixel size. Read once per sheet: it never changes, and
+        opening the file on every keypress leaked a handle each time."""
+        cached = self._sheet_sizes.get(sheet)
+        if cached is None:
+            with Image.open(self.sheets[sheet - 1]) as image:
+                cached = self._sheet_sizes[sheet] = image.size
+        return cached
+
     def _show_sheet(self, sheet: int) -> None:
         box = (self.preview.winfo_width() - PREVIEW_MARGIN,
                self.preview.winfo_height() - PREVIEW_MARGIN)
@@ -691,21 +707,19 @@ class App(ttk.Frame):
             self.after(60, lambda: self._show_sheet(sheet))
             return
 
-        source = Image.open(self.sheets[sheet - 1])
-        size = preview.fit_within(source.size, box)
+        size = preview.fit_within(self._sheet_size(sheet), box)
         key = (sheet, size)
         if key not in self.preview_cache:
-            self.preview_cache.clear()   # one page at a time; these are large
-            # Show the scan as it is. Forcing grey here made a colour
-            # collection look black and white in the one place the operator
-            # checks a page, and hid that the built PDF was grey too.
-            if source.mode == "RGBA":
-                flat = Image.new("RGB", source.size, (255, 255, 255))
-                flat.paste(source, mask=source.split()[3])
-                source = flat
-            elif source.mode not in ("L", "RGB"):
-                source = source.convert("RGB")
-            image = source.resize(size, Image.LANCZOS)
+            # Bounded, not cleared. Prev/Next exists to walk every sheet, and
+            # a cache of one made stepping back redo a render finished two
+            # presses ago -- 90 ms each on a colour scan, on this thread.
+            while len(self.preview_cache) >= PREVIEW_CACHE_SIZE:
+                self.preview_cache.pop(next(iter(self.preview_cache)))
+            source = Image.open(self.sheets[sheet - 1])
+            # The same rule the embedded image uses, so the preview cannot
+            # drift from what the PDF will hold -- which is how the grey
+            # conversion hid itself in the first place.
+            image = prepare.displayable(source).resize(size, Image.LANCZOS)
             self.preview_cache[key] = ImageTk.PhotoImage(image)
         self._shown_sheet = sheet
         self.preview.config(image=self.preview_cache[key], text="")
@@ -715,7 +729,7 @@ class App(ttk.Frame):
         """Move one sheet, whether or not anything in the outline points at it."""
         if not (self.grid_model and self.sheets):
             return
-        current = getattr(self, "_shown_sheet", None) or 1
+        current = self._shown_sheet or 1
         self._show_sheet(self.grid_model.step_sheet(current, delta))
 
     def _update_stepper(self, sheet: int) -> None:
@@ -728,7 +742,7 @@ class App(ttk.Frame):
 
     def _on_preview_resized(self, _event) -> None:
         """Re-render at the new size, once the operator stops dragging."""
-        sheet = getattr(self, "_shown_sheet", None)
+        sheet = self._shown_sheet
         if sheet is None:
             return
         if getattr(self, "_resize_job", None):

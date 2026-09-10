@@ -267,6 +267,14 @@ place.
 *High* makes a much larger file; *Small* is for emailing. Changing it does not
 mean re-reading the text, so it is cheap to try.
 
+**Colour** is not a setting. The finished PDF keeps whatever the scanner
+captured: a colour scan stays in colour, a black-and-white one stays black and
+white. Colour costs about 7% in file size.
+
+> Versions before 0.1.8 converted everything to black and white. If you built
+> an issue with colour covers or photographs on an older version, build it
+> again — the bookmarks you reviewed are saved, so it takes about a second.
+
 **Re-analyse** — reads the scans again and throws away the bookmarks currently
 listed, including any you edited. Use it if you open an issue that was done some
 time ago and the list looks wrong or empty. It asks before discarding anything.

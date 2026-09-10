@@ -1,19 +1,19 @@
 """Turn survey.json into the missing-pages report."""
 import json
 import re
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
+
+from srebook.core import outline  # noqa: E402
 DATA = json.loads((REPO / "docs" / "scan-survey-data.json").read_text(encoding="utf-8"))
 OUT = REPO / "docs" / "scan-completeness-report.md"
 
-CONFIDENT = 0.25          # folios read, as a share of body sheets
-
-
-def rng(r):
-    def num(v):
-        return int(v) if v and v.isdigit() else None
-    return num(r.get("first_label")), num(r.get("last_label"))
+# The same threshold the program itself uses to decide whether an issue's
+# numbering was read well enough to draw any conclusion from.
+CONFIDENT = outline.READABLE_COVERAGE
 
 
 def share(r):
@@ -22,14 +22,7 @@ def share(r):
 
 rows = [r for r in DATA if "error" not in r]
 for r in rows:
-    lo, hi = rng(r)
-    r["_lo"], r["_hi"] = lo, hi
-    r["_share"] = share(r)
-    r["_readable"] = r["_share"] >= CONFIDENT and r["anchor"] is not None
-    out_of_range = bool(r["cited_but_absent"]) and (
-        lo is None or hi is None
-        or not all(lo <= p <= hi for p in r["cited_but_absent"]))
-    r["_out_of_range"] = out_of_range
+    r["_readable"] = share(r) >= CONFIDENT and r["anchor"] is not None
 
 # One bucket each, most actionable first, so the counts add up to the total.
 #

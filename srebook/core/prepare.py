@@ -66,6 +66,28 @@ def measure_skew(image: Image.Image) -> float:
     return round(best_angle, 2)
 
 
+def displayable(image: Image.Image) -> Image.Image:
+    """The scan as L or RGB, keeping whatever colour the scanner captured.
+
+    Most of this collection is in colour, and converting everything to grey
+    published forty years of a county history journal in black and white for
+    about 7% in file size.
+
+    Shared with the window's preview deliberately. The preview exists so the
+    operator can see what the PDF will contain, so a second copy of this rule
+    would let the two disagree -- which is exactly how the grey conversion hid
+    itself: the preview looked grey, so the grey output looked correct.
+    """
+    if image.mode == "RGBA":
+        # JPEG holds no transparency, and RGBA is the commonest mode here.
+        flat = Image.new("RGB", image.size, (255, 255, 255))
+        flat.paste(image, mask=image.getchannel("A"))
+        return flat
+    if image.mode not in ("L", "RGB"):
+        return image.convert("RGB")
+    return image
+
+
 def prepare_sheet(path: Path, ocr_dpi: int = 300, embed_dpi: int = 200) -> PreparedSheet:
     path = Path(path)
     try:
@@ -74,19 +96,8 @@ def prepare_sheet(path: Path, ocr_dpi: int = 300, embed_dpi: int = 200) -> Prepa
     except (UnidentifiedImageError, OSError) as exc:
         raise PrepareError(f"Could not read the scan {path.name}: {exc}") from exc
 
-    # Keep the colour the scanner captured. Most of this collection is in
-    # colour, and converting everything to grey published forty years of a
-    # county history journal in black and white for a 7% saving in file size.
-    if image.mode == "RGBA":
-        # JPEG cannot hold transparency, and RGBA is the commonest mode here.
-        flat = Image.new("RGB", image.size, (255, 255, 255))
-        flat.paste(image, mask=image.split()[3])
-        image = flat
-    elif image.mode not in ("L", "RGB"):
-        image = image.convert("RGB")
-
-    grey = image if image.mode == "L" else image.convert("L")
-    skew = measure_skew(grey)
+    image = displayable(image)
+    skew = measure_skew(image)
     if abs(skew) >= DESKEW_MIN_DEG:
         # expand=False keeps the two derivatives related by a single scale
         # factor, which is what lets hOCR coordinates map onto the embedded image.

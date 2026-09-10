@@ -34,7 +34,7 @@ class IssueMetadata:
     issue: int | None = None
 
 
-def _is_metadata_file(path: Path) -> bool:
+def is_metadata_file(path: Path) -> bool:
     """A companion file the operating system left behind, not a page scan.
 
     A Mac writing to a network share or a USB drive leaves an AppleDouble file,
@@ -65,7 +65,7 @@ def find_sheets(folder: Path) -> list[Path]:
     sheets = [
         p for p in folder.iterdir()
         if p.is_file() and p.suffix.lower() in TIFF_SUFFIXES
-        and not _is_metadata_file(p)
+        and not is_metadata_file(p)
     ]
     sheets = sorted(sheets, key=_natural_key)
     _refuse_multipage(sheets)

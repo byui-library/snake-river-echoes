@@ -848,3 +848,36 @@ def test_a_page_just_before_the_first_is_still_missing():
     labels = [str(n) for n in range(27, 47)]
 
     assert outline.pages_not_in_scan([25, 30], labels) == [25]
+
+
+# ----------------------------------------- is the numbering readable? ----
+
+def test_an_issue_whose_folios_were_barely_read_is_not_understood():
+    """Vol 9 No 2: one folio across 25 body sheets, no anchor. Its labels are
+    a guess, so a citation outside them says nothing."""
+    assert not outline.numbering_is_readable({5: 27}, body_sheets=25)
+
+
+def test_an_issue_with_folios_on_a_quarter_of_its_sheets_is_understood():
+    folios = {s: s + 24 for s in range(3, 11)}      # 8 of 25
+    assert outline.numbering_is_readable(folios, body_sheets=25)
+
+
+def test_no_body_sheets_is_not_understood():
+    assert not outline.numbering_is_readable({}, body_sheets=0)
+
+
+def test_a_citation_is_not_reported_when_the_numbering_is_a_guess():
+    """The program refused to build Vol 9 No 2 over four pages that do not
+    exist, while the report said nothing was missing from it."""
+    labels = [str(n) for n in range(1, 29)]
+
+    assert outline.pages_not_in_scan([31, 32, 37, 38], labels,
+                                     numbering_known=False) == []
+
+
+def test_a_citation_is_still_reported_when_the_numbering_is_known():
+    labels = [str(n) for n in range(73, 95)]
+
+    assert outline.pages_not_in_scan([95, 96], labels,
+                                     numbering_known=True) == [95, 96]

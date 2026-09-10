@@ -9,6 +9,7 @@
    1
   ],
   "folios_read": 14,
+  "numbering_readable": true,
   "folios": {
    "4": 4,
    "6": 6,
@@ -44,6 +45,7 @@
    25
   ],
   "folios_read": 10,
+  "numbering_readable": true,
   "folios": {
    "3": 27,
    "4": 30,
@@ -89,6 +91,7 @@
    49
   ],
   "folios_read": 15,
+  "numbering_readable": true,
   "folios": {
    "3": 51,
    "4": 52,
@@ -133,6 +136,7 @@
    73
   ],
   "folios_read": 13,
+  "numbering_readable": true,
   "folios": {
    "3": 75,
    "4": 76,
@@ -181,6 +185,7 @@
    1
   ],
   "folios_read": 13,
+  "numbering_readable": true,
   "folios": {
    "10": 10,
    "11": 11,
@@ -229,6 +234,7 @@
    25
   ],
   "folios_read": 17,
+  "numbering_readable": true,
   "folios": {
    "4": 28,
    "6": 30,
@@ -275,6 +281,7 @@
    49
   ],
   "folios_read": 16,
+  "numbering_readable": true,
   "folios": {
    "3": 51,
    "5": 53,
@@ -318,6 +325,7 @@
    73
   ],
   "folios_read": 18,
+  "numbering_readable": true,
   "folios": {
    "3": 75,
    "4": 76,
@@ -371,6 +379,7 @@
    1
   ],
   "folios_read": 8,
+  "numbering_readable": true,
   "folios": {
    "10": 10,
    "13": 13,
@@ -397,6 +406,7 @@
    20
   ],
   "folios_read": 18,
+  "numbering_readable": true,
   "folios": {
    "4": 23,
    "5": 24,
@@ -439,6 +449,7 @@
    40
   ],
   "folios_read": 10,
+  "numbering_readable": true,
   "folios": {
    "4": 43,
    "5": 44,
@@ -472,6 +483,7 @@
    56
   ],
   "folios_read": 14,
+  "numbering_readable": true,
   "folios": {
    "4": 59,
    "5": 60,
@@ -509,6 +521,7 @@
    1
   ],
   "folios_read": 10,
+  "numbering_readable": true,
   "folios": {
    "5": 2,
    "13": 10,
@@ -546,6 +559,7 @@
    21
   ],
   "folios_read": 16,
+  "numbering_readable": true,
   "folios": {
    "5": 25,
    "6": 26,
@@ -602,6 +616,7 @@
    52
   ],
   "folios_read": 29,
+  "numbering_readable": true,
   "folios": {
    "5": 56,
    "6": 57,
@@ -651,6 +666,7 @@
    1
   ],
   "folios_read": 7,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "15": 13,
@@ -680,6 +696,7 @@
    23
   ],
   "folios_read": 20,
+  "numbering_readable": true,
   "folios": {
    "4": 26,
    "5": 27,
@@ -727,6 +744,7 @@
    47
   ],
   "folios_read": 12,
+  "numbering_readable": true,
   "folios": {
    "4": 50,
    "5": 51,
@@ -768,6 +786,7 @@
    71
   ],
   "folios_read": 16,
+  "numbering_readable": true,
   "folios": {
    "6": 76,
    "7": 77,
@@ -805,6 +824,7 @@
    1
   ],
   "folios_read": 12,
+  "numbering_readable": true,
   "folios": {
    "3": 1,
    "5": 4,
@@ -841,6 +861,7 @@
    23
   ],
   "folios_read": 13,
+  "numbering_readable": true,
   "folios": {
    "4": 26,
    "5": 27,
@@ -878,6 +899,7 @@
    47
   ],
   "folios_read": 16,
+  "numbering_readable": true,
   "folios": {
    "5": 51,
    "6": 52,
@@ -912,6 +934,7 @@
    71
   ],
   "folios_read": 22,
+  "numbering_readable": true,
   "folios": {
    "4": 74,
    "5": 75,
@@ -961,6 +984,7 @@
    1
   ],
   "folios_read": 42,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "13": 11,
@@ -1031,6 +1055,7 @@
    1
   ],
   "folios_read": 19,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "14": 12,
@@ -1070,6 +1095,7 @@
    1
   ],
   "folios_read": 34,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "13": 11,
@@ -1126,6 +1152,7 @@
    1
   ],
   "folios_read": 17,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "16": 14,
@@ -1197,6 +1224,7 @@
    1
   ],
   "folios_read": 12,
+  "numbering_readable": false,
   "folios": {
    "18": 16,
    "20": 18,
@@ -1263,6 +1291,7 @@
    1
   ],
   "folios_read": 9,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "14": 12,
@@ -1305,6 +1334,7 @@
    23
   ],
   "folios_read": 21,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "4": 26,
@@ -1357,6 +1387,7 @@
    1
   ],
   "folios_read": 12,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "13": 11,
@@ -1397,6 +1428,7 @@
    23
   ],
   "folios_read": 24,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "4": 26,
@@ -1450,6 +1482,7 @@
    1
   ],
   "folios_read": 3,
+  "numbering_readable": false,
   "folios": {
    "8": 6,
    "12": 10,
@@ -1483,6 +1516,7 @@
    23
   ],
   "folios_read": 18,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "4": 26,
@@ -1530,6 +1564,7 @@
    1
   ],
   "folios_read": 13,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "14": 12,
@@ -1569,6 +1604,7 @@
    23
   ],
   "folios_read": 20,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "4": 26,
@@ -1619,6 +1655,7 @@
    1
   ],
   "folios_read": 14,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "13": 11,
@@ -1659,6 +1696,7 @@
    23
   ],
   "folios_read": 22,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "4": 26,
@@ -1711,6 +1749,7 @@
    1
   ],
   "folios_read": 6,
+  "numbering_readable": false,
   "folios": {
    "16": 14,
    "18": 16,
@@ -1746,6 +1785,7 @@
    23
   ],
   "folios_read": 22,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "4": 26,
@@ -1800,6 +1840,7 @@
    1
   ],
   "folios_read": 13,
+  "numbering_readable": true,
   "folios": {
    "6": 4,
    "7": 5,
@@ -1844,6 +1885,7 @@
    1
   ],
   "folios_read": 2,
+  "numbering_readable": false,
   "folios": {
    "16": 14,
    "22": 40
@@ -1873,6 +1915,7 @@
    23
   ],
   "folios_read": 7,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "4": 26,
@@ -1903,6 +1946,7 @@
    1
   ],
   "folios_read": 10,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "13": 11,
@@ -1939,6 +1983,7 @@
    23
   ],
   "folios_read": 8,
+  "numbering_readable": true,
   "folios": {
    "6": 28,
    "8": 30,
@@ -1978,6 +2023,7 @@
    1
   ],
   "folios_read": 11,
+  "numbering_readable": true,
   "folios": {
    "8": 6,
    "12": 10,
@@ -2013,6 +2059,7 @@
    23
   ],
   "folios_read": 8,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "7": 29,
@@ -2047,6 +2094,7 @@
    1
   ],
   "folios_read": 4,
+  "numbering_readable": false,
   "folios": {
    "8": 6,
    "10": 9,
@@ -2075,6 +2123,7 @@
    23
   ],
   "folios_read": 17,
+  "numbering_readable": true,
   "folios": {
    "4": 26,
    "6": 28,
@@ -2127,6 +2176,7 @@
    1
   ],
   "folios_read": 2,
+  "numbering_readable": false,
   "folios": {
    "9": 7,
    "26": 25
@@ -2153,6 +2203,7 @@
    23
   ],
   "folios_read": 17,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "10": 32,
@@ -2199,6 +2250,7 @@
    1
   ],
   "folios_read": 32,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "13": 11,
@@ -2265,6 +2317,7 @@
    43
   ],
   "folios_read": 21,
+  "numbering_readable": true,
   "folios": {
    "3": 45,
    "4": 46,
@@ -2314,6 +2367,7 @@
    67
   ],
   "folios_read": 14,
+  "numbering_readable": true,
   "folios": {
    "3": 69,
    "4": 70,
@@ -2353,6 +2407,7 @@
    1
   ],
   "folios_read": 11,
+  "numbering_readable": true,
   "folios": {
    "12": 10,
    "14": 12,
@@ -2388,6 +2443,7 @@
    23
   ],
   "folios_read": 16,
+  "numbering_readable": true,
   "folios": {
    "4": 26,
    "5": 27,
@@ -2428,6 +2484,7 @@
    1
   ],
   "folios_read": 3,
+  "numbering_readable": false,
   "folios": {
    "18": 16,
    "20": 18,
@@ -2459,6 +2516,7 @@
    23
   ],
   "folios_read": 53,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "4": 26,
@@ -2543,6 +2601,7 @@
    87
   ],
   "folios_read": 18,
+  "numbering_readable": true,
   "folios": {
    "3": 89,
    "4": 90,
@@ -2589,6 +2648,7 @@
    1
   ],
   "folios_read": 15,
+  "numbering_readable": true,
   "folios": {
    "11": 4,
    "12": 10,
@@ -2642,6 +2702,7 @@
    1
   ],
   "folios_read": 10,
+  "numbering_readable": true,
   "folios": {
    "6": 4,
    "12": 10,
@@ -2680,6 +2741,7 @@
    23
   ],
   "folios_read": 25,
+  "numbering_readable": true,
   "folios": {
    "3": 25,
    "4": 26,
@@ -2733,6 +2795,7 @@
    1
   ],
   "folios_read": 28,
+  "numbering_readable": true,
   "folios": {
    "9": 7,
    "11": 9,
@@ -2776,6 +2839,7 @@
   "contents_sheet": 3,
   "anchor": null,
   "folios_read": 1,
+  "numbering_readable": false,
   "folios": {
    "20": 7
   },
@@ -2795,6 +2859,7 @@
    23
   ],
   "folios_read": 22,
+  "numbering_readable": true,
   "folios": {
    "4": 26,
    "5": 27,
@@ -2847,6 +2912,7 @@
    47
   ],
   "folios_read": 21,
+  "numbering_readable": true,
   "folios": {
    "4": 50,
    "7": 53,
@@ -2891,6 +2957,7 @@
   "contents_sheet": 3,
   "anchor": null,
   "folios_read": 1,
+  "numbering_readable": false,
   "folios": {
    "17": 37
   },
@@ -2914,6 +2981,7 @@
   "contents_sheet": 3,
   "anchor": null,
   "folios_read": 1,
+  "numbering_readable": false,
   "folios": {
    "15": 1
   },
@@ -2940,6 +3008,7 @@
   "contents_sheet": 3,
   "anchor": null,
   "folios_read": 1,
+  "numbering_readable": false,
   "folios": {
    "4": 96
   },
@@ -2959,12 +3028,7 @@
    47,
    48
   ],
-  "cited_but_absent": [
-   31,
-   32,
-   37,
-   38
-  ],
+  "cited_but_absent": [],
   "first_label": "1",
   "last_label": "28"
  },
@@ -2978,6 +3042,7 @@
    47
   ],
   "folios_read": 3,
+  "numbering_readable": false,
   "folios": {
    "8": 54,
    "9": 55,
@@ -3004,6 +3069,7 @@
   "contents_sheet": 3,
   "anchor": null,
   "folios_read": 1,
+  "numbering_readable": false,
   "folios": {
    "14": 84
   },
@@ -3035,6 +3101,7 @@
    1
   ],
   "folios_read": 42,
+  "numbering_readable": true,
   "folios": {
    "7": 5,
    "9": 3,
@@ -3097,6 +3164,7 @@
    1
   ],
   "folios_read": 28,
+  "numbering_readable": true,
   "folios": {
    "9": 7,
    "11": 9,

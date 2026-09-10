@@ -18,8 +18,8 @@ separately, under *Could not be checked*, and need a person.
 |---|---|
 | Pages missing, strong evidence | **4** |
 | Pages missing, from the contents page | 4 |
-| Cannot be judged — numbering unknown | 1 |
-| Could not be checked | 12 |
+| Cannot be judged — numbering unknown | 0 |
+| Could not be checked | 13 |
 | No problem found | 52 |
 
 ## 1. Pages missing — strong evidence
@@ -65,9 +65,7 @@ tenth prints `—32—`, so the issue runs 23 to 50 and its contents citing
 because those scans are faint and the text recognition could not make the
 numbers out — the folio came through as `xeP=`.
 
-| Issue | Cited but not found | Range the program guessed | Page numbers read |
-|---|---|---|---|
-| SRE Volume 9 / SRE Vol 9 Number 2 | 31, 32, 37, 38 | 1–28 | **1 of 25** |
+**None.**
 
 ## 4. Could not be checked
 
@@ -87,6 +85,7 @@ copies, or rescan at a setting that renders the page numbers legibly.
 | SRE Volume 8 / SRE Vol 8 Number 1 | 1 of 25 | 28 |
 | SRE Volume 8 / SRE Vol 8 Number 4 | 1 of 25 | 28 |
 | SRE Volume 9 / SRE Vol 9 Number 1 | 1 of 25 | 28 |
+| SRE Volume 9 / SRE Vol 9 Number 2 | 1 of 25 | 28 |
 | SRE Volume 9 / SRE Vol 9 Number 3 | 3 of 25 | 28 |
 | SRE Volume 9 / SRE Vol 9 Number 4 | 1 of 25 | 28 |
 

@@ -22,41 +22,46 @@ one of them — resolve it explicitly rather than silently following the code.
 ## Next session — start here
 
 Released through v0.1.7 and in use by a special collections employee. `py -m pytest`
-(399 tests) and `py packaging/build.py` both work from a clean checkout plus the
+(412 tests) and `py packaging/build.py` both work from a clean checkout plus the
 sample scans.
 
 **Everything of consequence since v0.1.0 was found by someone using the program,
 not by inspecting it.** Prefer putting a build in front of a real operator over
 another round of tuning here.
 
-**Six issues have been processed** (Vol 1 Nos 1-4, Vol 2 No 1, Vol 4 No 1), and each
-one taught `core/outline.py` something new -- see the commit history. Each is pinned by
-tests built from its own real OCR, so tuning for one cannot silently cost another.
+**The whole collection has now been read**: 73 issue folders, 2,327 pages, 1971 to
+2015 -- see [the scan completeness report](docs/scan-completeness-report.md) and
+`packaging/survey_scans.py`. Re-surveying from cached OCR takes about 13 seconds, so a
+change to how page numbers are read can be re-checked across every issue.
 
-The curve has not flattened. **An issue from a different decade is still the real
-test**, and the parser should be expected to need work.
+Issues from later decades broke the parser in ways the 1971 ones never could, and both
+faults were invisible rather than loud: **Vol 27 prints its folios as `-5-`**, and
+**Volume 18 is thick with dates and read 1959 as a page number**. Expect more of this
+shape -- a reading that produces a confident wrong answer, not an error.
 
-Also untested: **an issue containing photographs.** The issues seen so far are
-typewritten text, so the 200 DPI embed decision has never been judged against a
-halftone.
+**Where the parser is still blind:** ten issues read too few page numbers to be judged
+at all, mostly faint scans where OCR turns `—27—` into `xeP=`. The report lists them
+under *Could not be checked*, and a blank there means nobody looked.
 
 What has never needed changing across any of them: OCR, the text layer, deskew, page
 labels, metadata and PDF assembly. The fragile part is narrow -- outline detection,
 and reading the folder.
 
-**Three of five scanned issues are missing pages** (Vol 1 No 2: 28-29, Vol 1 No 4:
-95-96, Vol 2 No 1: 29). The program reports this now; the scans still need redoing.
+**Eight issues need pages rescanned.** Four on the strongest evidence, where the pages
+either side of the gap print numbers that skip -- Vol 1 No 2 (28-29), Vol 6 No 1 (13-17),
+Volume 18 (71-73), Volume 36 No 1 (5-9) -- and four more on the contents page alone.
+The report has the detail; the scans still need redoing.
 
 ### Verified, with evidence
 
 | Claim | Evidence |
 |---|---|
-| Text layer lands on the words | 99.42% of 11,216 words recoverable at their own location, PDFium |
+| Text layer lands on the words | 100% of 34,494 words recoverable at their own location across three issues, colour and grey: `py packaging/verify_text_layer.py <folder>`. A 12 pt shift scores 1.4%, so the check is known to bite |
 | Outline, page labels, metadata, search | checked on the real issue; Ctrl-F confirmed by the operator |
-| Deskew applied to both derivatives | test, and the constraint is documented below |
+| Deskew applied to both derivatives | test; the OCR image is now derived from the rotated embed image, so they cannot drift apart |
 | Packaged build refuses a system Tesseract | frozen exe exits 1 on this machine, which has one installed |
 | Installer works with no dev tools | [clean-machine test](docs/superpowers/specs/2026-08-21-clean-machine-test-pass.txt), Windows Sandbox, networking off |
-| Missing pages reported by the packaged build | clean-machine test on v0.1.7 names pages 28, 29 of Vol 1 No 2, and numbers its cover 25 |
+| Missing pages reported by the packaged build | clean-machine test on v0.1.8 names pages 28, 29 of Vol 1 No 2, and numbers its cover 25 |
 | AppleDouble files ignored | packaged build reads 22 sheets from a folder of 22 scans + 22 ghosts |
 
 ## Hard constraints
@@ -77,8 +82,20 @@ This is the single easiest thing to get wrong in this codebase.
 
 - **OCR reads 300 DPI** (the full original). Tesseract is tuned for 300; downsampling
   first measurably worsens accuracy on small print.
-- **The PDF embeds 200 DPI** grayscale JPEG. This is what determines file size
-  (~7 MB per 22-page issue).
+- **The PDF embeds 200 DPI JPEG, in the colour the scanner captured.** This is what
+  determines file size (~7 MB per 22-page issue). A greyscale scan stays greyscale; an
+  RGB or RGBA one is embedded as RGB, with alpha flattened onto white because JPEG holds
+  no transparency.
+
+  Everything used to be converted to grey, decided when the whole corpus was 1971
+  typescript. **64 of the 73 folders are colour**, so that published forty years of the
+  journal in black and white, for about 7% in file size. Only the nine Vol 1 and Vol 2
+  folders are genuinely grey.
+
+  **The image dictionary must declare what the JPEG actually holds.** `DCTDecode` passes
+  the JPEG through untouched, so `assemble._colour_space` reads its mode; hardcoding
+  `DeviceGray` beside an RGB JPEG makes a viewer read three colour bytes as three grey
+  pixels, and every page comes out smeared.
 
 They are decoupled deliberately. This is why the pipeline uses Tesseract's **hOCR** output
 and composes the text layer itself, rather than using Tesseract's built-in PDF renderer
@@ -120,8 +137,15 @@ srebook/
   cli.py    thin wrapper over core; also the manual test harness
 ```
 
-Stages are cached per sheet. OCR is slow; assembly is ~1 second. Preserve that boundary —
-editing a bookmark and rebuilding must never re-OCR.
+Stages are cached per sheet. Editing a bookmark and rebuilding must never re-OCR, and
+does not.
+
+**It is no longer near-instant, though.** `build` still re-runs `prepare_sheet` for every
+sheet because it needs the embedded JPEG, and keeping colour made that about 1.7x more
+expensive -- rotate and resample now run on three channels. Measured: ~580 ms per colour
+sheet, so ~26 s to rebuild a 45-sheet issue. Caching `embed_jpeg` beside the `.hocr`,
+keyed on `(sheet, embed_dpi)`, would make a bookmark edit cost no image work at all. Not
+done.
 
 ## Conventions
 
@@ -138,7 +162,7 @@ editing a bookmark and rebuilding must never re-OCR.
 py -m srebook.cli draft "Image Files/SRE Vol 1 Number 1"    # OCR + propose outline
 py -m srebook.cli build "Image Files/SRE Vol 1 Number 1"    # after reviewing the sidecar
 py -m srebook.gui                                            # the window
-py -m pytest                                                 # 399 tests, ~20s
+py -m pytest                                                 # 412 tests, ~25s
 ```
 
 Drafting an issue takes about 80 seconds; building from cached OCR is near-instant.
@@ -172,7 +196,7 @@ Then double-click `dist/clean-test.wsb` to run the whole thing in Windows Sandbo
   not ImageMagick. ISCC lives at `~/AppData/Local/Programs/Inno Setup 6/ISCC.exe`.
 - **Sample data lives in `Image Files/`, and it is four whole issues, not one.** This is
   the reproduction corpus — check a reported bug against it before asking for scans.
-  Untracked (see `.gitignore`), 300 DPI grayscale LZW; do not assume a clone has it.
+  Untracked (see `.gitignore`), 300 DPI, mostly colour (64 of 73 folders); do not assume a clone has it.
 
   | Folder | Sheets | Printed pages | Notes |
   |---|---|---|---|
@@ -265,10 +289,47 @@ Non-obvious things the spike established — read the findings doc before writin
   can express both runs; the model cannot yet. **Rescanning 28-29 removes the problem
   entirely** — prefer that over modelling the gap.
 
+- **A rule that decides what the program does must live where the program can see it.**
+  The coverage threshold that tells a readable page range from a guessed one lived in a
+  report generator, so the report said Vol 9 No 2 was complete while the program refused
+  to build it over four pages that do not exist. `outline.numbering_is_readable` now holds
+  it, and both callers ask.
+
+- **A guess made where there is no evidence is worse than no answer.** Vol 9 No 2 yields
+  one folio across 25 sheets, so its labels fall back to 1..28. Every conclusion drawn
+  against that fallback was fiction, and each one looked as confident as a real finding.
+
 - **A setting whose effect the operator cannot see will be worked around.** The front
   matter's page labels were right, and the Printed page column showed a dash for them, so
   an operator with no confirmation that "sheet 3 is printed page 1" had taken effect typed
   `0` into the column instead. The fix was to display `i`, `ii`: the feature was never
   missing, only invisible. Reserve the dash for genuinely unknown.
+- **Half a fix is worse than none.** Keeping the scanner's colour made the embedded JPEG
+  RGB while the image dictionary still said `DeviceGray`, and every page of every colour
+  issue came out smeared. The old all-grey behaviour was at least coherent. When a change
+  crosses a boundary, test the seam, not each side: 384 tests passed because not one of
+  them built a colour page.
+
+- **The same wrong assumption is usually written down twice.** Grey conversion lived in
+  `prepare.py` *and* in the preview in `app.py`. Fixing only the pipeline would have left
+  the operator looking at grey and believing the output was grey; fixing only the preview
+  would have hidden a real defect. Grep for the assumption, not for the symptom.
+
+- **A parser that cannot read is more dangerous than one that errors.** Vol 27 prints
+  `-5-` and read as unnumbered; Volume 18 is full of dates and read 1959 as a folio,
+  concluding the issue ran to page 2004. Both produced a confident answer, and one of them
+  would have sent an archivist to rescan pages that never existed. Detection now reports
+  how many folios it actually read, and the report refuses to call an issue complete when
+  the answer is "almost none".
+
+- **Say what could not be checked, not just what failed.** An issue where detection found
+  nothing and an issue with nothing wrong both produce an empty result. Presented as one
+  list they are indistinguishable, and the blank reads as a clean bill of health.
+
+- **An action that destroys information needs a way back, not an inverse.** Merge folds
+  two titles and a sheet into one; there is nothing left to reconstruct them from. One
+  snapshot before each action covers Merge, Remove and every other edit alike -- and is
+  less code than a single bespoke un-merge.
+
 - **Never write source files through a shell heredoc containing escapes.** Two did not
   survive, and one silently compiled a regex as `CONTENTS`.

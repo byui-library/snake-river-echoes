@@ -9,7 +9,6 @@ never has to.
 """
 from __future__ import annotations
 
-from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -40,7 +39,6 @@ class OutlineGrid:
     rows: list[Row] = field(default_factory=list)
     dirty: bool = False
     _history: list[list[Row]] = field(default_factory=list, repr=False)
-    _acting: int = field(default=0, repr=False)
 
     def __post_init__(self):
         if not self.rows:
@@ -92,22 +90,11 @@ class OutlineGrid:
         one case, a whole branch in the other -- so there is nothing to compute
         an inverse from. A copy taken beforehand covers every action alike.
 
-        Nested calls record nothing: `set_printed` goes through `edit`, and one
-        action the operator took should cost one press of Undo.
+        One snapshot per action: `set_printed` and `set_printed_text` delegate
+        to `edit`, which is the only one of the three that records.
         """
-        if self._acting:
-            return
         self._history.append([replace(row) for row in self.rows])
         del self._history[:-UNDO_DEPTH]
-
-    @contextmanager
-    def _action(self):
-        self._remember()
-        self._acting += 1
-        try:
-            yield
-        finally:
-            self._acting -= 1
 
     def can_undo(self) -> bool:
         return bool(self._history)
@@ -383,8 +370,7 @@ class OutlineGrid:
         sheet = sheet_for_label(self.issue, text, self.sheet_count)
         if sheet is None:
             return False
-        with self._action():        # one press of Undo, not two
-            self.edit(index, sheet=sheet)
+        self.edit(index, sheet=sheet)
         return True
 
     def set_printed(self, index: int, printed: int) -> bool:
@@ -399,8 +385,7 @@ class OutlineGrid:
         # falls before this issue starts.
         if sheet is None or not 1 <= sheet <= self.sheet_count:
             return False
-        with self._action():        # one press of Undo, not two
-            self.edit(index, sheet=sheet)
+        self.edit(index, sheet=sheet)
         return True
 
     # ---------------------------------------------------------- saving ----

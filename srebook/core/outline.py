@@ -68,6 +68,19 @@ def _normalize(text: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", text.upper())
 
 
+YEAR_RANGE = (1500, 2100)   # a four-digit number in here is a date, not a page
+
+
+def looks_like_a_year(digits: str) -> bool:
+    """Four digits inside the date range.
+
+    Written once because it was written three times, with two different page
+    ceilings -- so a contents page citing 1600 was a page while a folio reading
+    1600 was not, and the two lists were then compared against each other.
+    """
+    return len(digits) == 4 and YEAR_RANGE[0] <= int(digits) <= YEAR_RANGE[1]
+
+
 def _is_leader_noise(token: str) -> bool:
     """A trailing token that is debris from the dot leader rather than title.
 
@@ -75,7 +88,7 @@ def _is_leader_noise(token: str) -> bool:
     page number or misread run of periods ("99939)", "0", "2", "Ao") does not.
     """
     digits = "".join(c for c in token if c.isdigit())
-    if len(digits) == 4 and 1500 <= int(digits) <= 2100:
+    if looks_like_a_year(digits):
         return False
     return len([c for c in token if c.isalpha()]) <= 2
 
@@ -452,8 +465,8 @@ def cited_pages(lines: list[str]) -> list[int]:
             if group is None:
                 continue
             page = int(group)
-            if len(group) == 4 and 1500 <= page <= 2100:
-                continue                      # a year
+            if looks_like_a_year(group):
+                continue
             if 1 <= page <= 2000:
                 pages.append(page)
     return pages
@@ -493,7 +506,10 @@ def cited_page_for(lines: list[str], title: str) -> int | None:
 
 
 FOLIO_MAX_GAP = 20      # a plausible run of pages missed at the scanner
-FOLIO_LIMIT = 1499      # no issue of this journal is thousands of pages long
+# Below the date range, so a year standing on its own line can never be read as
+# a folio. Volume 18 is a local history journal thick with dates: reading 1959
+# and 1988 as page numbers made it conclude the issue ran from 1917 to 2004.
+FOLIO_LIMIT = YEAR_RANGE[0] - 1
 
 
 # A folio may be dressed: -5-, [5], (5), 5. -- but 36-37 is a span, not a page.
@@ -510,23 +526,8 @@ def _folio_on_line(text: str) -> int | None:
     match = FOLIO_LINE.match(text)
     if not match:
         return None
-    digits = match.group(1)
-    value = int(digits)
-    return value if _could_be_a_folio(value, digits) else None
-
-
-def _could_be_a_folio(value: int, text: str) -> bool:
-    """A page number, not a date standing alone on its own line.
-
-    Volume 18 is a local history journal: its pages are thick with years, and
-    reading 1959 and 1988 as folios made it conclude the issue ran from printed
-    page 1917 to 2004. `cited_pages` has always refused four-digit years; this
-    had not needed to, because it only ever looked at the first two lines of a
-    sheet.
-    """
-    if not 1 <= value <= FOLIO_LIMIT:
-        return False
-    return not (len(text) == 4 and 1500 <= value <= 2100)
+    value = int(match.group(1))
+    return value if 1 <= value <= FOLIO_LIMIT else None
 
 
 def printed_folios(sheets: dict[int, list[str]]) -> dict[int, int]:
@@ -597,10 +598,26 @@ def detect_gaps(folios: dict[int, int]) -> list[int]:
     return gaps
 
 
-PLAUSIBLE_SLACK = 10    # how far past an issue's own pages a gap can reach
+PLAUSIBLE_SLACK = 10       # how far past an issue's own pages a gap can reach
+READABLE_COVERAGE = 0.25   # folios read, as a share of the body, to trust a range
 
 
-def pages_not_in_scan(cited: list[int], labels: list[str]) -> list[int]:
+def numbering_is_readable(folios: dict[int, int], body_sheets: int) -> bool:
+    """Were enough page numbers read to trust what this issue is numbered?
+
+    Vol 9 No 2 yields one folio across 25 sheets because its scans are faint,
+    so its labels fall back to 1..28 -- a guess. Measured against that guess
+    the contents page appears to cite four pages the scan lacks, and the
+    program refused to build the issue until a person accepted a gap that does
+    not exist. A range nobody could read supports no conclusion at all.
+    """
+    if body_sheets <= 0:
+        return False
+    return len(folios) / body_sheets >= READABLE_COVERAGE
+
+
+def pages_not_in_scan(cited: list[int], labels: list[str],
+                      numbering_known: bool = True) -> list[int]:
     """Pages the contents page cites that no sheet in this scan carries.
 
     Compared against the labels the sheets actually end up with, rather than
@@ -612,6 +629,9 @@ def pages_not_in_scan(cited: list[int], labels: list[str]) -> list[int]:
     This catches pages missing from the end of an issue, where no following
     folio exists to reveal a jump; `detect_gaps` catches a hole in the middle.
     """
+    # A citation can only be measured against a range that was actually read.
+    if not numbering_known:
+        return []
     carried = {int(label) for label in labels if label.isdigit()}
     if not carried:
         return []

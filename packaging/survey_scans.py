@@ -16,7 +16,7 @@ REPO = Path(__file__).resolve().parent.parent
 OUT = REPO / "docs" / "scan-survey-data.json"
 sys.path.insert(0, str(REPO))
 
-from srebook.core import outline, pipeline
+from srebook.core import ingest, outline, pipeline
 from srebook.core.model import Issue, page_labels
 
 
@@ -25,9 +25,11 @@ def issue_folders() -> list[Path]:
     for d in sorted((REPO / "Image Files").rglob("*")):
         if not d.is_dir() or "output" in d.parts or ".cache" in d.parts:
             continue
+        # ingest's rules, not a second copy: it also skips the AppleDouble
+        # files a Mac leaves beside every scan.
         tifs = [p for p in d.iterdir()
-                if p.is_file() and p.suffix.lower() in (".tif", ".tiff")
-                and not p.name.startswith("._")]
+                if p.is_file() and p.suffix.lower() in ingest.TIFF_SUFFIXES
+                and not ingest.is_metadata_file(p)]
         if tifs:
             found.append(d)
     return found
@@ -54,28 +56,27 @@ def survey(folder: Path) -> dict:
         front.extend(text.get(s, []))
     body = {s: l for s, l in text.items() if s > contents_sheet}
 
-    issue = Issue()
-    anchor = outline.detect_body_start(body)
-    if anchor:
-        issue.body_starts_at_sheet, issue.body_starts_at_printed = anchor
-    folios = outline.printed_folios(body)
-    gaps = outline.detect_gaps(folios)
-    issue.missing_pages = gaps
+    # The same call draft makes, so the report can never describe a program
+    # that no longer exists.
+    scan = pipeline.assess_scan(front, body, len(sheets))
+
+    issue = Issue(missing_pages=scan.gaps)
+    if scan.anchor:
+        issue.body_starts_at_sheet, issue.body_starts_at_printed = scan.anchor
     labels = page_labels(issue, len(sheets))
-    cited = outline.cited_pages(front)
-    absent = outline.pages_not_in_scan(cited, labels)
 
     return {
         "folder": str(folder.relative_to(REPO / "Image Files")),
         "sheets": len(sheets),
-        "body_sheets": len(body),
+        "body_sheets": scan.body_sheets,
         "contents_sheet": contents_sheet,
-        "anchor": list(anchor) if anchor else None,
-        "folios_read": len(folios),
-        "folios": {str(k): v for k, v in sorted(folios.items())},
-        "gaps_from_folios": gaps,
-        "cited_pages": cited,
-        "cited_but_absent": absent,
+        "anchor": list(scan.anchor) if scan.anchor else None,
+        "folios_read": len(scan.folios),
+        "numbering_readable": scan.numbering_readable,
+        "folios": {str(k): v for k, v in sorted(scan.folios.items())},
+        "gaps_from_folios": scan.gaps,
+        "cited_pages": scan.cited,
+        "cited_but_absent": scan.cited_but_absent,
         "first_label": labels[0] if labels else None,
         "last_label": labels[-1] if labels else None,
     }
