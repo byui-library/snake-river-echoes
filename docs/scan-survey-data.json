@@ -425,10 +425,7 @@
    88,
    39
   ],
-  "cited_but_absent": [
-   81,
-   88
-  ],
+  "cited_but_absent": [],
   "first_label": "20",
   "last_label": "43"
  },
@@ -535,9 +532,7 @@
    23,
    100
   ],
-  "cited_but_absent": [
-   100
-  ],
+  "cited_but_absent": [],
   "first_label": "i",
   "last_label": "25"
  },
@@ -593,9 +588,7 @@
    52,
    100
   ],
-  "cited_but_absent": [
-   100
-  ],
+  "cited_but_absent": [],
   "first_label": "21",
   "last_label": "56"
  },
@@ -644,9 +637,7 @@
   "cited_pages": [
    4
   ],
-  "cited_but_absent": [
-   4
-  ],
+  "cited_but_absent": [],
   "first_label": "52",
   "last_label": "91"
  },
@@ -722,9 +713,7 @@
    100,
    25
   ],
-  "cited_but_absent": [
-   100
-  ],
+  "cited_but_absent": [],
   "first_label": "23",
   "last_label": "50"
  },
@@ -958,10 +947,7 @@
    5,
    88
   ],
-  "cited_but_absent": [
-   5,
-   15
-  ],
+  "cited_but_absent": [],
   "first_label": "71",
   "last_label": "98"
  },
@@ -2199,9 +2185,7 @@
    51,
    53
   ],
-  "cited_but_absent": [
-   2
-  ],
+  "cited_but_absent": [],
   "first_label": "23",
   "last_label": "58"
  },
@@ -2390,13 +2374,7 @@
    89,
    90
   ],
-  "cited_but_absent": [
-   69,
-   70,
-   88,
-   89,
-   90
-  ],
+  "cited_but_absent": [],
   "first_label": "i",
   "last_label": "26"
  },
@@ -2741,9 +2719,7 @@
    49,
    50
   ],
-  "cited_but_absent": [
-   1
-  ],
+  "cited_but_absent": [],
   "first_label": "23",
   "last_label": "58"
  },
@@ -2927,14 +2903,7 @@
    92,
    96
   ],
-  "cited_but_absent": [
-   75,
-   78,
-   83,
-   85,
-   92,
-   96
-  ],
+  "cited_but_absent": [],
   "first_label": "1",
   "last_label": "28"
  },
@@ -2994,14 +2963,7 @@
    31,
    32,
    37,
-   38,
-   39,
-   43,
-   44,
-   45,
-   46,
-   47,
-   48
+   38
   ],
   "first_label": "1",
   "last_label": "28"
@@ -3059,17 +3021,7 @@
    94,
    7
   ],
-  "cited_but_absent": [
-   74,
-   75,
-   76,
-   80,
-   82,
-   84,
-   87,
-   91,
-   94
-  ],
+  "cited_but_absent": [],
   "first_label": "1",
   "last_label": "28"
  },

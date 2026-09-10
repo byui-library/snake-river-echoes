@@ -33,9 +33,19 @@ def issue_folders() -> list[Path]:
     return found
 
 
+def fully_cached(sheets: list[Path], folder: Path) -> bool:
+    cache = pipeline.cache_dir(folder)
+    return all((cache / f"{s.stem}.hocr").exists() for s in sheets)
+
+
 def survey(folder: Path) -> dict:
     sheets = pipeline._sheets(folder)
-    pipeline._ocr_sheets(sheets, folder, 200, None)
+    # Reading the text is the whole cost. Where every sheet is already cached
+    # there is nothing to read, and re-running detection over the collection
+    # takes seconds rather than an hour -- which is what makes it practical to
+    # re-survey after changing how page numbers are recognised.
+    if not fully_cached(sheets, folder):
+        pipeline._ocr_sheets(sheets, folder, 200, None)
     text = pipeline._sheet_text(sheets, folder)
 
     contents_sheet = outline.find_contents_sheet(text)

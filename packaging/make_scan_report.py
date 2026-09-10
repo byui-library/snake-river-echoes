@@ -32,13 +32,19 @@ for r in rows:
     r["_out_of_range"] = out_of_range
 
 # One bucket each, most actionable first, so the counts add up to the total.
+#
+# A citation is only reported at all once it survives the plausibility check --
+# a page the issue could never contain is the reading at fault, not the scan.
+# What is left divides on whether the issue's own numbering can be trusted: if
+# too few page numbers were readable, a citation outside the range says nothing
+# about the scan and everything about the guess.
 gaps, plausible, suspect, unreadable, clean = [], [], [], [], []
 for r in rows:
     if r["gaps_from_folios"]:
         gaps.append(r)
-    elif r["cited_but_absent"] and not r["_out_of_range"]:
+    elif r["cited_but_absent"] and r["_readable"]:
         plausible.append(r)
-    elif r["_out_of_range"]:
+    elif r["cited_but_absent"]:
         suspect.append(r)
     elif not r["_readable"]:
         unreadable.append(r)
@@ -82,8 +88,8 @@ w("")
 w(f"| | Issues |")
 w(f"|---|---|")
 w(f"| Pages missing, strong evidence | **{len(gaps)}** |")
-w(f"| Pages missing, weaker evidence | {len(plausible)} |")
-w(f"| Probably a false alarm | {len(suspect)} |")
+w(f"| Pages missing, from the contents page | {len(plausible)} |")
+w(f"| Cannot be judged — numbering unknown | {len(suspect)} |")
 w(f"| Could not be checked | {len(unreadable)} |")
 w(f"| No problem found | {len(clean)} |")
 w("")
@@ -102,9 +108,11 @@ w("")
 
 w("## 2. Pages missing — weaker evidence")
 w("")
-w("Where the contents page cites a page no scan carries, **and** that citation")
-w("falls inside the issue's own numbering, so it is credible without the page")
-w("numbers themselves confirming it.")
+w("The contents page cites a page no scan carries, and enough printed page")
+w("numbers were read to trust the range, so the citation can be taken at its")
+w("word. These sit at the edge of what the issue holds — Vol 1 No 4 ends at 94")
+w("and its contents cites 95 and 96 — which is what two pages missed at the")
+w("scanner look like when there is no later number to reveal the jump.")
 w("")
 if plausible:
     w("Check against the paper copy before rescanning.")
@@ -119,46 +127,28 @@ else:
     w("section 3.")
 w("")
 
-w("## 3. Probably a false alarm — do not rescan on this alone")
+w("## 3. Cannot be judged — the issue's own numbering is unknown")
 w("")
-w("In each of these the contents page cites pages that fall **outside** the")
-w("numbering the program worked out for the issue. When every citation lands")
-w("outside, the likely fault is the program's idea of where the numbering")
-w("starts, not the scan.")
+w("The contents page here cites pages no scan carries, but too few printed page")
+w("numbers were readable to trust the range the program worked out. A citation")
+w("outside a guessed range says nothing about the scan. **Do not rescan on this")
+w("alone.** To settle one, look at a single page and read the number on it.")
 w("")
-w("This was confirmed by eye. **Vol 9 Number 2** is listed below as missing")
-w("eleven pages. Its sheet 5 prints `—27—` and its sheet 10 prints `—32—`, so")
-w("the issue runs 23 to 50 and its contents citing 31–48 is correct: **nothing")
-w("is missing from it.** The program read its page numbers as 1–28 because the")
-w("scans are faint and OCR could not make them out — sheet 5's `—27—` came")
-w("through as `xeP=`.")
+w("This is not hypothetical. **Vol 9 Number 2** appeared in an earlier version of")
+w("this report as missing eleven pages. Its fifth sheet prints `—27—` and its")
+w("tenth prints `—32—`, so the issue runs 23 to 50 and its contents citing")
+w("31–48 is correct: **nothing is missing from it.** The program read it as 1–28")
+w("because those scans are faint and the text recognition could not make the")
+w("numbers out — the folio came through as `xeP=`.")
 w("")
-w("They divide into two, and the difference decides what to do about them.")
-w("")
-w("**a. The issue's numbering is not known.** Too few page numbers were readable")
-w("to trust the range, so a citation outside it means nothing. Vol 9 No 2 above")
-w("is one of these. To settle any of them, look at one page and read the number")
-w("printed on it.")
-w("")
-w("| Issue | Cited but not found | Range the program guessed | Page numbers read |")
-w("|---|---|---|---|")
-for r in sorted((x for x in suspect if x["_share"] < CONFIDENT),
-                key=lambda r: r["folder"]):
-    w(f"| {label(r)} | {pages(r['cited_but_absent'])} | {issue_range(r)} | "
-      f"**{r['folios_read']} of {r['body_sheets']}** |")
-w("")
-w("**b. The numbering is well established, so the citation is the error.** Here")
-w("the range is confirmed by many printed page numbers, and the cited page could")
-w("not exist in the issue — page 100 of an issue that ends at 50. The contents")
-w("page has been misread, most often a price or a dot leader taken for a page")
-w("number. Nothing to rescan.")
-w("")
-w("| Issue | Cited but not found | Issue runs | Page numbers read |")
-w("|---|---|---|---|")
-for r in sorted((x for x in suspect if x["_share"] >= CONFIDENT),
-                key=lambda r: r["folder"]):
-    w(f"| {label(r)} | {pages(r['cited_but_absent'])} | {issue_range(r)} | "
-      f"{r['folios_read']} of {r['body_sheets']} |")
+if suspect:
+    w("| Issue | Cited but not found | Range the program guessed | Page numbers read |")
+    w("|---|---|---|---|")
+    for r in sorted(suspect, key=lambda r: r["folder"]):
+        w(f"| {label(r)} | {pages(r['cited_but_absent'])} | {issue_range(r)} | "
+          f"**{r['folios_read']} of {r['body_sheets']}** |")
+else:
+    w("**None.**")
 w("")
 
 w("## 4. Could not be checked")

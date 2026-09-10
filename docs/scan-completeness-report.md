@@ -17,10 +17,10 @@ separately, under *Could not be checked*, and need a person.
 | | Issues |
 |---|---|
 | Pages missing, strong evidence | **4** |
-| Pages missing, weaker evidence | 0 |
-| Probably a false alarm | 16 |
-| Could not be checked | 10 |
-| No problem found | 43 |
+| Pages missing, from the contents page | 4 |
+| Cannot be judged — numbering unknown | 1 |
+| Could not be checked | 12 |
+| No problem found | 52 |
 
 ## 1. Pages missing — strong evidence
 
@@ -36,62 +36,38 @@ skip. This is the most reliable finding in the report: **rescan these.**
 
 ## 2. Pages missing — weaker evidence
 
-Where the contents page cites a page no scan carries, **and** that citation
-falls inside the issue's own numbering, so it is credible without the page
-numbers themselves confirming it.
+The contents page cites a page no scan carries, and enough printed page
+numbers were read to trust the range, so the citation can be taken at its
+word. These sit at the edge of what the issue holds — Vol 1 No 4 ends at 94
+and its contents cites 95 and 96 — which is what two pages missed at the
+scanner look like when there is no later number to reveal the jump.
 
-**None.** Every citation-only finding fell outside its issue's numbering,
-which points at the program's reading rather than at the scan. They are in
-section 3.
+Check against the paper copy before rescanning.
 
-## 3. Probably a false alarm — do not rescan on this alone
+| Issue | Cited but not found | Issue runs |
+|---|---|---|
+| SRE Vol 1 Number 4 | 95, 96 | 73–94 |
+| SRE Vol 2 Number 1 | 29 | 1–24 |
+| SRE Volume 24 / SRE Vol24 Number 2 | 20 | 23–50 |
+| SRE Volume 25 / SRE Vol 25 Number 2 | 20 | 23–50 |
 
-In each of these the contents page cites pages that fall **outside** the
-numbering the program worked out for the issue. When every citation lands
-outside, the likely fault is the program's idea of where the numbering
-starts, not the scan.
+## 3. Cannot be judged — the issue's own numbering is unknown
 
-This was confirmed by eye. **Vol 9 Number 2** is listed below as missing
-eleven pages. Its sheet 5 prints `—27—` and its sheet 10 prints `—32—`, so
-the issue runs 23 to 50 and its contents citing 31–48 is correct: **nothing
-is missing from it.** The program read its page numbers as 1–28 because the
-scans are faint and OCR could not make them out — sheet 5's `—27—` came
-through as `xeP=`.
+The contents page here cites pages no scan carries, but too few printed page
+numbers were readable to trust the range the program worked out. A citation
+outside a guessed range says nothing about the scan. **Do not rescan on this
+alone.** To settle one, look at a single page and read the number on it.
 
-They divide into two, and the difference decides what to do about them.
-
-**a. The issue's numbering is not known.** Too few page numbers were readable
-to trust the range, so a citation outside it means nothing. Vol 9 No 2 above
-is one of these. To settle any of them, look at one page and read the number
-printed on it.
+This is not hypothetical. **Vol 9 Number 2** appeared in an earlier version of
+this report as missing eleven pages. Its fifth sheet prints `—27—` and its
+tenth prints `—32—`, so the issue runs 23 to 50 and its contents citing
+31–48 is correct: **nothing is missing from it.** The program read it as 1–28
+because those scans are faint and the text recognition could not make the
+numbers out — the folio came through as `xeP=`.
 
 | Issue | Cited but not found | Range the program guessed | Page numbers read |
 |---|---|---|---|
-| SRE Volume 8 / SRE Vol 8 Number 4 | 75, 78, 83, 85, 92, 96 | 1–28 | **1 of 25** |
-| SRE Volume 9 / SRE Vol 9 Number 2 | 31, 32, 37, 38, 39, 43, 44, 45, 46, 47, 48 | 1–28 | **1 of 25** |
-| SRE Volume 9 / SRE Vol 9 Number 4 | 74, 75, 76, 80, 82, 84, 87, 91, 94 | 1–28 | **1 of 25** |
-
-**b. The numbering is well established, so the citation is the error.** Here
-the range is confirmed by many printed page numbers, and the cited page could
-not exist in the issue — page 100 of an issue that ends at 50. The contents
-page has been misread, most often a price or a dot leader taken for a page
-number. Nothing to rescan.
-
-| Issue | Cited but not found | Issue runs | Page numbers read |
-|---|---|---|---|
-| SRE Vol 1 Number 4 | 95, 96 | 73–94 | 13 of 20 |
-| SRE Vol 2 Number 1 | 29 | 1–24 | 13 of 22 |
-| SRE Vol 3 Number 2 | 81, 88 | 20–43 | 18 of 21 |
-| SRE Vol 4 Number 1 | 100 | i–25 | 10 of 25 |
-| SRE Vol 4 Number 2 & 3 | 100 | 21–56 | 16 of 33 |
-| SRE Vol 4 Number 4 | 4 | 52–91 | 29 of 39 |
-| SRE Vol 5 Number 2 | 100 | 23–50 | 20 of 25 |
-| SRE Vol 6 Number 4 | 5, 15 | 71–98 | 22 of 25 |
-| SRE Volume 24 / SRE Vol24 Number 2 | 20 | 23–50 | 20 of 26 |
-| SRE Volume 25 / SRE Vol 25 Number 2 | 20 | 23–50 | 22 of 26 |
-| SRE Volume 31 / SRE Vol 31 Number  2 | 2 | 23–58 | 17 of 34 |
-| SRE Volume 33 / SRE Vol 33 Number 1 | 69, 70, 88, 89, 90 | i–26 | 11 of 26 |
-| SRE Volume 37 / SRE Volume 37 Number 2 | 1 | 23–58 | 25 of 34 |
+| SRE Volume 9 / SRE Vol 9 Number 2 | 31, 32, 37, 38 | 1–28 | **1 of 25** |
 
 ## 4. Could not be checked
 
@@ -109,12 +85,14 @@ copies, or rescan at a setting that renders the page numbers legibly.
 | SRE Volume 31 / SRE Vol 31 Number  1 | 2 of 26 | 28 |
 | SRE Volume 35 / SRE Volume 35 Number 1 | 3 of 26 | 28 |
 | SRE Volume 8 / SRE Vol 8 Number 1 | 1 of 25 | 28 |
+| SRE Volume 8 / SRE Vol 8 Number 4 | 1 of 25 | 28 |
 | SRE Volume 9 / SRE Vol 9 Number 1 | 1 of 25 | 28 |
 | SRE Volume 9 / SRE Vol 9 Number 3 | 3 of 25 | 28 |
+| SRE Volume 9 / SRE Vol 9 Number 4 | 1 of 25 | 28 |
 
 ## 5. No problem found
 
-43 issues where enough page numbers were read to trust the result,
+52 issues where enough page numbers were read to trust the result,
 and they run consecutively with every cited page present.
 
 <details><summary>Show the list</summary>
@@ -125,13 +103,19 @@ and they run consecutively with every cited page present.
 - SRE Vol 2 Number 3 — 24 sheets, pages 49–72, 16 of 22 page numbers read
 - SRE Vol 2 Number 4 — 22 sheets, pages 73–94, 18 of 20 page numbers read
 - SRE Vol 3 Number 1 — 22 sheets, pages 1–22, 8 of 21 page numbers read
+- SRE Vol 3 Number 2 — 24 sheets, pages 20–43, 18 of 21 page numbers read
 - SRE Vol 3 Number 3 — 20 sheets, pages 40–59, 10 of 17 page numbers read
 - SRE Vol 3 Number 4 — 20 sheets, pages 56–75, 14 of 17 page numbers read
+- SRE Vol 4 Number 1 — 28 sheets, pages i–25, 10 of 25 page numbers read
+- SRE Vol 4 Number 2 & 3 — 36 sheets, pages 21–56, 16 of 33 page numbers read
+- SRE Vol 4 Number 4 — 40 sheets, pages 52–91, 29 of 39 page numbers read
 - SRE Vol 5 Number 1 — 28 sheets, pages i–26, 7 of 27 page numbers read
+- SRE Vol 5 Number 2 — 28 sheets, pages 23–50, 20 of 25 page numbers read
 - SRE Vol 5 Number 3 — 28 sheets, pages 47–74, 12 of 25 page numbers read
 - SRE Vol 5 Number 4 — 28 sheets, pages 71–98, 16 of 25 page numbers read
 - SRE Vol 6 Number 2 — 28 sheets, pages 23–50, 13 of 25 page numbers read
 - SRE Vol 6 Number 3 — 28 sheets, pages 47–74, 16 of 25 page numbers read
+- SRE Vol 6 Number 4 — 28 sheets, pages 71–98, 22 of 25 page numbers read
 - SRE Volume 16 — 58 sheets, pages i–56, 42 of 55 page numbers read
 - SRE Volume 17 — 52 sheets, pages i–50, 19 of 49 page numbers read
 - SRE Volume 19 — 54 sheets, pages i–52, 17 of 51 page numbers read
@@ -150,13 +134,16 @@ and they run consecutively with every cited page present.
 - SRE Volume 29 / SRE Vol 29 Number  1 — 28 sheets, pages i–26, 11 of 26 page numbers read
 - SRE Volume 29 / SRE Vol 29 Number  2 — 28 sheets, pages 23–50, 8 of 26 page numbers read
 - SRE Volume 30 / SRE Vol 30 Number  2 — 40 sheets, pages 23–62, 17 of 38 page numbers read
+- SRE Volume 31 / SRE Vol 31 Number  2 — 36 sheets, pages 23–58, 17 of 34 page numbers read
 - SRE Volume 32 / SRE Vol 32 Number 1 — 48 sheets, pages i–46, 32 of 46 page numbers read
 - SRE Volume 32 / SRE Vol 32 Number 2 — 28 sheets, pages 43–70, 21 of 26 page numbers read
 - SRE Volume 32 / SRE Vol 32 Number 3 — 28 sheets, pages 67–94, 14 of 26 page numbers read
+- SRE Volume 33 / SRE Vol 33 Number 1 — 28 sheets, pages i–26, 11 of 26 page numbers read
 - SRE Volume 33 / SRE Vol 33 Number 2 — 28 sheets, pages 23–50, 16 of 26 page numbers read
 - SRE Volume 35 / SRE Volume 35 Number 2 — 68 sheets, pages 23–90, 53 of 66 page numbers read
 - SRE Volume 35 / SRE Volume 35 Number 3 — 24 sheets, pages 87–110, 18 of 22 page numbers read
 - SRE Volume 37 / SRE Volume 37 Number 1 — 28 sheets, pages i–26, 10 of 26 page numbers read
+- SRE Volume 37 / SRE Volume 37 Number 2 — 36 sheets, pages 23–58, 25 of 34 page numbers read
 - SRE Volume 38 — 43 sheets, pages i–41, 28 of 42 page numbers read
 - SRE Volume 8 / SRE Vol 8 Number 2 — 28 sheets, pages 23–50, 22 of 25 page numbers read
 - SRE Volume 8 / SRE Vol 8 Number 3 — 28 sheets, pages 47–74, 21 of 25 page numbers read
