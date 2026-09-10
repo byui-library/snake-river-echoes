@@ -9,7 +9,8 @@ never has to.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from contextlib import contextmanager
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from ..core.model import (Bookmark, Issue, label_for_sheet, page_labels,
@@ -19,6 +20,7 @@ from ..core.model import (Bookmark, Issue, label_for_sheet, page_labels,
 
 MAX_LEVEL = 1  # 0 = article, 1 = a piece within a department
 UNPLACED_SHEET = "—"  # em dash: a guess, not an answer
+UNDO_DEPTH = 50       # deep enough for a review session, bounded for memory
 
 
 @dataclass
@@ -37,6 +39,8 @@ class OutlineGrid:
     sheet_count: int
     rows: list[Row] = field(default_factory=list)
     dirty: bool = False
+    _history: list[list[Row]] = field(default_factory=list, repr=False)
+    _acting: int = field(default=0, repr=False)
 
     def __post_init__(self):
         if not self.rows:
@@ -79,20 +83,60 @@ class OutlineGrid:
             count += 1
         return count
 
+    # ------------------------------------------------------------ undo ----
+
+    def _remember(self) -> None:
+        """Keep the list as it stands, before an action changes it.
+
+        Merge and Remove destroy what they touch -- both titles and a sheet in
+        one case, a whole branch in the other -- so there is nothing to compute
+        an inverse from. A copy taken beforehand covers every action alike.
+
+        Nested calls record nothing: `set_printed` goes through `edit`, and one
+        action the operator took should cost one press of Undo.
+        """
+        if self._acting:
+            return
+        self._history.append([replace(row) for row in self.rows])
+        del self._history[:-UNDO_DEPTH]
+
+    @contextmanager
+    def _action(self):
+        self._remember()
+        self._acting += 1
+        try:
+            yield
+        finally:
+            self._acting -= 1
+
+    def can_undo(self) -> bool:
+        return bool(self._history)
+
+    def undo(self) -> bool:
+        """Step back one action. Returns False when there is nothing to undo."""
+        if not self._history:
+            return False
+        self.rows = self._history.pop()
+        self.dirty = True
+        return True
+
     # --------------------------------------------------------- editing ----
 
     def add(self, title: str = "", sheet: int = 1) -> int:
+        self._remember()
         # Sheet 1 by default: visible and obviously wrong beats hidden.
         self.rows.append(Row(title, sheet, 0))
         self.dirty = True
         return len(self.rows) - 1
 
     def remove(self, index: int) -> None:
+        self._remember()
         span = 1 + self._children_of(index)
         del self.rows[index:index + span]
         self.dirty = True
 
     def edit(self, index: int, title: str | None = None, sheet: int | None = None) -> None:
+        self._remember()
         if title is not None:
             self.rows[index].title = title
         if sheet is not None:
@@ -108,6 +152,7 @@ class OutlineGrid:
         Cover that is the right answer, so the operator needs a way to agree
         with it, not only a way to change it.
         """
+        self._remember()
         span = 1 + self._children_of(index)
         for row in self.rows[index:index + span]:
             row.needs_review = False
@@ -132,6 +177,7 @@ class OutlineGrid:
         """
         if not self.can_merge_up(index):
             return index
+        self._remember()
         above = self.rows[index - 1]
         above.title = " ".join(f"{above.title} {self.rows[index].title}".split())
         above.needs_review = False      # it has just been looked at
@@ -150,6 +196,7 @@ class OutlineGrid:
 
     def indent(self, index: int) -> None:
         if self.can_indent(index):
+            self._remember()
             self.rows[index].level += 1
             self.dirty = True
 
@@ -158,6 +205,7 @@ class OutlineGrid:
 
     def outdent(self, index: int) -> None:
         if self.can_outdent(index):
+            self._remember()
             self.rows[index].level -= 1
             self.dirty = True
 
@@ -179,6 +227,7 @@ class OutlineGrid:
     def move_up(self, index: int) -> int:
         if not self.can_move_up(index):
             return index
+        self._remember()
         start, span = self._block(index)
         above_start = start - 1
         while above_start > 0 and self.rows[above_start].level > 0 \
@@ -193,6 +242,7 @@ class OutlineGrid:
     def move_down(self, index: int) -> int:
         if not self.can_move_down(index):
             return index
+        self._remember()
         start, span = self._block(index)
         _, next_span = self._block(start + span)
         block = self.rows[start:start + span]
@@ -333,7 +383,8 @@ class OutlineGrid:
         sheet = sheet_for_label(self.issue, text, self.sheet_count)
         if sheet is None:
             return False
-        self.edit(index, sheet=sheet)
+        with self._action():        # one press of Undo, not two
+            self.edit(index, sheet=sheet)
         return True
 
     def set_printed(self, index: int, printed: int) -> bool:
@@ -348,7 +399,8 @@ class OutlineGrid:
         # falls before this issue starts.
         if sheet is None or not 1 <= sheet <= self.sheet_count:
             return False
-        self.edit(index, sheet=sheet)
+        with self._action():        # one press of Undo, not two
+            self.edit(index, sheet=sheet)
         return True
 
     # ---------------------------------------------------------- saving ----

@@ -132,6 +132,7 @@ is left out of the PDF. Scan the page, build again, and it takes its place. See
 | **Remove** | Deletes the selected bookmark |
 | **↑ ↓** | Moves a bookmark up or down the list |
 | **Merge up** | Joins the selected bookmark onto the one above it, for an article split into a title and a byline |
+| **Undo** | Steps back one change to the list. Ctrl-Z does the same |
 | **→ Indent** | Tucks a bookmark under the one above, for poems inside a poetry section |
 | **← Outdent** | Brings it back out to the top level |
 
@@ -153,7 +154,8 @@ The same happens when a long heading is broken across two lines. Select the
 the bookmark keeps the *first* one's page — which is where the article actually
 starts, since the second may have been parked elsewhere.
 
-You do not have to retype anything. Merge as many times as it takes.
+You do not have to retype anything. Merge as many times as it takes, and if you
+join the wrong pair, **Undo** puts them back exactly as they were.
 
 ### Finding the right page
 

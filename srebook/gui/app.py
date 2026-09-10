@@ -242,6 +242,10 @@ class App(ttk.Frame):
         self.tree.tag_configure("attention", foreground="#a33")
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
         self.tree.bind("<Double-1>", self._on_edit_cell)
+        # The shortcut everyone reaches for first, bound on the window so it
+        # works wherever the focus happens to be.
+        self.winfo_toplevel().bind_all("<Control-z>", lambda _e: self.undo())
+        self.winfo_toplevel().bind_all("<Control-Z>", lambda _e: self.undo())
 
         scroll = ttk.Scrollbar(list_pane, orient="vertical", command=self.tree.yview)
         scroll.grid(row=0, column=1, sticky="ns")
@@ -288,6 +292,9 @@ class App(ttk.Frame):
                               # Some issues split an article across two
                               # bookmarks -- the title, then the byline.
                               ("Merge up", self.merge_up),
+                              # Merge and Remove destroy what they touch, so a
+                              # mis-click needs a way back.
+                              ("Undo", self.undo),
                               ("↑", self.move_up), ("↓", self.move_down),
                               ("→ Indent", self.indent), ("← Outdent", self.outdent)):
             ttk.Button(buttons, text=text, command=command, width=9).pack(
@@ -565,6 +572,17 @@ class App(ttk.Frame):
         self.grid_model.remove(index)
         self._refresh_tree(index)
         self._autosave()
+
+    def undo(self) -> None:
+        """Step back one action on the bookmark list."""
+        if not self.grid_model:
+            return
+        if not self.grid_model.undo():
+            self.status.config(text="Nothing to undo.")
+            return
+        self._refresh_tree()
+        self._autosave()
+        self.status.config(text="Undone.")
 
     def merge_up(self) -> None:
         """Fold the selected bookmark into the one above it."""

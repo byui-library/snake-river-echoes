@@ -690,3 +690,84 @@ def test_merge_returns_the_surviving_row():
 
     assert g.merge_up(2) == 1
     assert rows_of(g) == [("A", 1, 0), ("B C", 2, 0)]
+
+
+# ---------------------------------------------------------------- undo ----
+# Merge up destroys both titles and the second row's sheet, so there is no
+# inverse to compute -- and Remove is just as destructive. One snapshot per
+# action covers both.
+
+def test_undo_puts_a_merge_back():
+    g = a_grid([Bookmark("The Rigby Star", 11), Bookmark("By A.R. Chandler", 11)])
+    g.merge_up(1)
+
+    assert g.undo()
+
+    assert rows_of(g) == [("The Rigby Star", 11, 0), ("By A.R. Chandler", 11, 0)]
+
+
+def test_undo_puts_a_removed_bookmark_back():
+    g = a_grid([Bookmark("A", 1), Bookmark("Token Tales", 23)])
+    g.remove(1)
+
+    g.undo()
+
+    assert rows_of(g) == [("A", 1, 0), ("Token Tales", 23, 0)]
+
+
+def test_undo_restores_a_removed_parent_with_its_children():
+    g = a_grid([Bookmark("Poetry", 19, children=[Bookmark("Poem", 21)])])
+    g.remove(0)
+
+    g.undo()
+
+    assert rows_of(g) == [("Poetry", 19, 0), ("Poem", 21, 1)]
+
+
+def test_undo_puts_back_an_edited_title():
+    g = a_grid([Bookmark("Camus", 24)])
+    g.edit(0, title="Camus By Ada Smith")
+
+    g.undo()
+
+    assert g.rows[0].title == "Camus"
+
+
+def test_undo_steps_back_one_action_at_a_time():
+    g = a_grid([Bookmark("A", 1), Bookmark("B", 2), Bookmark("C", 3)])
+    g.merge_up(1)          # A B
+    g.merge_up(1)          # A B C
+
+    g.undo()
+    assert [r.title for r in g.rows] == ["A B", "C"]
+
+    g.undo()
+    assert [r.title for r in g.rows] == ["A", "B", "C"]
+
+
+def test_there_is_nothing_to_undo_at_the_start():
+    g = a_grid([Bookmark("A", 1)])
+
+    assert not g.can_undo()
+    assert not g.undo()
+
+
+def test_setting_a_printed_page_undoes_in_one_step():
+    """set_printed calls edit internally; that must not cost two presses."""
+    g = a_paginated_grid([Bookmark("Article", 1)])
+    g.set_printed(0, 30)
+    assert g.rows[0].sheet == 6
+
+    g.undo()
+
+    assert g.rows[0].sheet == 1
+
+
+def test_undo_marks_the_grid_dirty_so_the_change_is_saved():
+    g = a_grid([Bookmark("A", 1), Bookmark("B", 2)])
+    g.merge_up(1)
+    g.dirty = False
+
+    g.undo()
+
+    assert g.dirty
