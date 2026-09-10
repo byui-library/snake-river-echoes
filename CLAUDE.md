@@ -22,7 +22,7 @@ one of them — resolve it explicitly rather than silently following the code.
 ## Next session — start here
 
 Released through v0.1.7 and in use by a special collections employee. `py -m pytest`
-(412 tests) and `py packaging/build.py` both work from a clean checkout plus the
+(432 tests) and `py packaging/build.py` both work from a clean checkout plus the
 sample scans.
 
 **Everything of consequence since v0.1.0 was found by someone using the program,
@@ -162,7 +162,7 @@ done.
 py -m srebook.cli draft "Image Files/SRE Vol 1 Number 1"    # OCR + propose outline
 py -m srebook.cli build "Image Files/SRE Vol 1 Number 1"    # after reviewing the sidecar
 py -m srebook.gui                                            # the window
-py -m pytest                                                 # 412 tests, ~25s
+py -m pytest                                                 # 432 tests, ~30s
 ```
 
 Drafting an issue takes about 80 seconds. Rebuilding reuses the cached OCR but still
