@@ -191,7 +191,7 @@ Then double-click `dist/clean-test.wsb` to run the whole thing in Windows Sandbo
 
 - Windows. The Bash tool is Git Bash; PowerShell is also available.
 - **`python` on PATH is the Microsoft Store shim and does not work.** Use the real one:
-  `/c/Users/milesm/AppData/Local/Programs/Python/Python313/python.exe` (3.13.15), or `py`.
+  the real interpreter under `AppData/Local/Programs/Python/Python313/`, or just `py`.
 - Tesseract, PyInstaller and Inno Setup are installed. Ghostscript and ImageMagick are
   not, and must stay that way. Note that `convert` on PATH is Windows' filesystem tool,
   not ImageMagick. ISCC lives at `~/AppData/Local/Programs/Inno Setup 6/ISCC.exe`.
