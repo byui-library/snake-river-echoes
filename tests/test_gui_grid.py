@@ -773,26 +773,54 @@ def test_undo_marks_the_grid_dirty_so_the_change_is_saved():
     assert g.dirty
 
 
-def test_merging_into_a_missing_bookmark_makes_it_publishable_again():
-    """The merged row looked settled in the list but was still marked as
-    waiting on an unscanned page, so assembly dropped it from the PDF
-    silently -- a bookmark the operator had just repaired, gone."""
-    g = a_grid([Bookmark("Battle of Pierre's Hole", 4, needs_review=True,
+def test_merging_onto_a_missing_bookmark_keeps_it_waiting():
+    """This test used to assert the opposite, on sheet 4. The drafter parks a
+    missing row on sheet 1, so clearing the reason published a bookmark for an
+    unscanned article that jumped to the front cover -- the one thing the
+    outline is not allowed to do."""
+    g = a_grid([Bookmark("Pioneer Days", 1, needs_review=True,
                          review_reason="missing", missing_page=28),
-                Bookmark("By Wendell Gillette", 4)])
+                Bookmark("By Ethel Smith", 1, needs_review=True,
+                         review_reason="missing", missing_page=28)])
+
+    g.merge_up(1)
+
+    assert g.rows[0].title == "Pioneer Days By Ethel Smith"
+    assert g.rows[0].review_reason == "missing"
+    assert g.rows[0].missing_page == 28
+    assert g.needs_attention(0)
+
+
+def test_merging_a_byline_onto_a_placed_article_settles_it():
+    """The ordinary case: the survivor's sheet is a real answer."""
+    g = a_grid([Bookmark("Token Tales", 11), Bookmark("By Kendall Ballard", 11)])
 
     g.merge_up(1)
 
     assert g.rows[0].review_reason == ""
-    assert g.rows[0].missing_page is None
+    assert not g.needs_attention(0)
 
 
-def test_merging_clears_the_reason_on_every_kind_of_flag():
-    for reason in ("missing", "unplaced", "suggested"):
+def test_merging_onto_an_unplaced_bookmark_keeps_it_unplaced():
+    """Its sheet is a guess too."""
+    g = a_grid([Bookmark("Community History", 1, needs_review=True,
+                         review_reason="unplaced"),
+                Bookmark("By Someone", 1)])
+
+    g.merge_up(1)
+
+    assert g.rows[0].review_reason == "unplaced"
+
+
+def test_merging_settles_a_row_only_when_its_sheet_is_a_real_answer():
+    """A "suggested" row was read off the page it names, so its sheet is
+    certain. "unplaced" and "missing" rows are parked on sheet 1."""
+    settles = {"suggested": "", "unplaced": "unplaced", "missing": "missing"}
+    for reason, expected in settles.items():
         g = a_grid([Bookmark("Title", 4, needs_review=True, review_reason=reason),
                     Bookmark("By Someone", 4)])
         g.merge_up(1)
-        assert g.rows[0].review_reason == "", reason
+        assert g.rows[0].review_reason == expected, reason
 
 
 def test_giving_a_missing_bookmark_a_real_sheet_makes_it_publishable():

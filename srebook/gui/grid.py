@@ -182,12 +182,14 @@ class OutlineGrid:
         self._remember()
         above = self.rows[index - 1]
         above.title = " ".join(f"{above.title} {self.rows[index].title}".split())
-        # Clear the reason as well as the flag. Assembly drops a bookmark whose
-        # reason is "missing" whatever the flag says, so a row merged into one
-        # looked settled in the list and vanished from the PDF without a word.
-        above.needs_review = False      # it has just been looked at
-        above.review_reason = ""
-        above.missing_page = None
+        # Only settle it when the surviving sheet is a real answer. The drafter
+        # parks an unplaced or missing title on sheet 1, so clearing the reason
+        # there published a bookmark for an unscanned article pointing at the
+        # front cover -- worse than the silent drop it was meant to fix.
+        if not self._sheet_is_a_guess(above):
+            above.needs_review = False
+            above.review_reason = ""
+            above.missing_page = None
         del self.rows[index]
         self.dirty = True
         return index - 1

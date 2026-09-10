@@ -11,7 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from .core import ocr, pipeline
+from .core import assemble, ocr, pipeline
 from .core.model import Issue, load_sidecar
 
 
@@ -88,9 +88,19 @@ def _cmd_build(args) -> int:
     def count(bookmarks):
         return sum(1 + count(b.children) for b in bookmarks)
 
+    # What reached the book, not what is in the file. A bookmark waiting on a
+    # page that was never scanned is held back, so counting the sidecar
+    # reported more bookmarks than the PDF contains -- and an unattended
+    # --force run printed that clean, wrong line with nothing else to say.
+    published = count(assemble._publishable(issue.bookmarks))
+    withheld = count(issue.bookmarks) - published
+
     print(f"\nBuilt {out.name}")
     print(f"  {out}")
-    print(f"  {out.stat().st_size / 1e6:.2f} MB, {count(issue.bookmarks)} bookmarks")
+    print(f"  {out.stat().st_size / 1e6:.2f} MB, {published} bookmarks")
+    if withheld:
+        print(f"  {withheld} held back, waiting on pages this scan does not "
+              "contain. They stay in the saved review.")
     return 0
 
 

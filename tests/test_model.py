@@ -421,3 +421,30 @@ def test_an_unplaced_bookmark_still_stops_the_build():
                  review_reason="unplaced")])
 
     assert validate(issue, sheet_count=20) != []
+
+
+def test_a_reason_survives_the_sidecar_without_its_flag(tmp_path):
+    """review_reason was written only inside `if needs_review`, so a bookmark
+    held out of the PDF loaded back as an ordinary one on its placeholder
+    sheet -- and no reader reported it in the meantime."""
+    path = tmp_path / "i.json"
+    save_sidecar(Issue(bookmarks=[
+        Bookmark("Lost", 1, needs_review=False, review_reason="missing",
+                 missing_page=28)]), path)
+
+    kept = load_sidecar(path).bookmarks[0]
+
+    assert (kept.review_reason, kept.missing_page) == ("missing", 28)
+
+
+def test_a_bookmark_stranded_on_a_gap_that_is_gone_is_reported():
+    """The operator clears the Missing pages field; the row still says it is
+    waiting. validate stayed silent because it expects the issue-level gap
+    message to speak for it, and that message no longer fires."""
+    issue = Issue(missing_pages=[], bookmarks=[
+        Bookmark("Lost", 1, needs_review=True, review_reason="missing",
+                 missing_page=28)])
+
+    problems = validate(issue, sheet_count=20)
+
+    assert any("28" in p for p in problems), problems

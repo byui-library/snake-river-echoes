@@ -132,9 +132,13 @@ def _publishable(bookmarks: list[Bookmark]) -> list[Bookmark]:
     """
     kept = []
     for b in bookmarks:
+        children = _publishable(b.children)
         if b.review_reason == "missing":
+            # Promote what is under it. Skipping the subtree took settled
+            # bookmarks out of the book along with the parked one.
+            kept.extend(children)
             continue
-        kept.append(Bookmark(b.title, b.sheet, _publishable(b.children),
+        kept.append(Bookmark(b.title, b.sheet, children,
                              b.needs_review, b.review_reason, b.missing_page))
     return kept
 

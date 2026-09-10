@@ -382,3 +382,19 @@ def test_the_declared_width_matches_the_jpeg(tmp_path):
         image = pdf.pages[0].Resources.XObject.Im0
         decoded = Image.open(io.BytesIO(bytes(image.get_raw_stream_buffer())))
         assert (int(image.Width), int(image.Height)) == decoded.size
+
+
+def test_a_child_of_a_missing_parent_is_kept(tmp_path):
+    """Skipping the parent skipped its whole subtree, so a settled bookmark
+    nested under a parked one vanished from the PDF with nothing said."""
+    issue = an_issue(missing_pages=[28], gap_acknowledged=True, bookmarks=[
+        Bookmark("Front Cover", 1),
+        Bookmark("Lost Article", 1, needs_review=True, review_reason="missing",
+                 missing_page=28, children=[Bookmark("A Real Article", 2)]),
+    ])
+
+    out = build(tmp_path, issue, [page(), page(), page()])
+
+    with pikepdf.open(out) as pdf:
+        titles = [i.title for i in pdf.open_outline().root]
+    assert titles == ["Front Cover", "A Real Article"]

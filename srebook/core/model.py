@@ -36,8 +36,11 @@ class Bookmark:
         d: dict = {"title": self.title, "sheet": self.sheet}
         if self.needs_review:
             d["needs_review"] = True
-            if self.review_reason:
-                d["review_reason"] = self.review_reason
+        # Written whatever the flag says: assembly keys on the reason alone, so
+        # dropping it on save turned a withheld bookmark into a published one
+        # pointing at its placeholder sheet.
+        if self.review_reason:
+            d["review_reason"] = self.review_reason
         if self.missing_page is not None:
             d["missing_page"] = self.missing_page
         if self.children:
@@ -280,8 +283,17 @@ def validate(issue: Issue, sheet_count: int) -> list[str]:
                     f'Bookmark "{b.title}" points at sheet {b.sheet}, '
                     f"but this issue has {sheet_count} sheets."
                 )
-            if b.needs_review and b.review_reason == "missing":
-                pass    # nothing to fix: the page is not in the scan
+            if b.review_reason == "missing":
+                # Normally the issue-level gap message below speaks for these.
+                # Once the operator corrects the missing-pages list, it no
+                # longer fires -- and this bookmark is still held out of the
+                # PDF, with nothing anywhere to say why.
+                if b.missing_page not in issue.missing_pages:
+                    problems.append(
+                        f'"{b.title}" is still waiting for printed page '
+                        f"{b.missing_page}, which is no longer listed as "
+                        "missing from this scan. Give it a page number, or "
+                        "remove it.")
             elif b.needs_review and b.review_reason == "suggested":
                 problems.append(
                     f'"{b.title}" is printed on sheet {b.sheet} but is not '
