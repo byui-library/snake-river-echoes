@@ -7,10 +7,17 @@ Built to digitize *Snake River Echoes*, the journal of the Upper Snake River Val
 Historical Society, and intended to be installed on archive workstations by staff who
 should not have to think about OCR.
 
-> **Status: complete and verified.** The installer has been tested on a pristine
-> Windows with no Python and no Tesseract and networking disabled — it installs,
-> uses its own bundled OCR engine, and builds a searchable 22-page PDF. See
+> **Status: in daily use.** The installer is tested on a pristine Windows with no
+> Python and no Tesseract and networking disabled — it installs, uses its own bundled
+> OCR engine, and builds a searchable PDF. See
 > [the design spec](docs/superpowers/specs/2026-08-20-sre-book-builder-design.md).
+
+## Download
+
+**[Latest release](https://github.com/byui-library/snake-river-echoes/releases/latest)** —
+`SREBookBuilder-<version>-setup.exe`. Installs per-user, needs no administrator, and
+bundles everything it uses. The printable
+[operator guide](docs/operator-guide.pdf) is attached to the same page.
 
 ## Using it
 
@@ -36,8 +43,12 @@ py -m srebook.gui
 
 Pick a folder and it reads the text in the background while you fill in the issue
 details. Bookmarks it could not place are flagged in red; selecting any bookmark shows
-that sheet, so you can confirm an article really starts there. Build takes about a
-second, because the text is already read.
+that sheet, so you can confirm an article really starts there.
+
+The list holds *articles*, so **Previous / Next** step through every sheet including the
+blank leaves and full-page photographs nothing points at — which is how you confirm a
+scan is whole. **Merge up** joins a title to the byline underneath it when the parser
+split one article in two, and **Undo** (or Ctrl-Z) steps back any change to the list.
 
 ## What you get per issue
 
@@ -48,13 +59,16 @@ A single PDF with:
 - **Correct page labels** — the viewer's page box reads `7 (9 of 22)`, so a citation to
   printed page 7 lands on printed page 7
 - **Embedded metadata** — title, volume, issue, year, publisher
+- **The colour the scanner captured** — a colour scan stays in colour, a greyscale one
+  stays greyscale
 
-About 7 MB for a 22-page issue.
+About 7 MB for a 22-page issue in greyscale, 16 MB for a 28-page issue in colour.
 
 ## Design in one paragraph
 
-Scans are read at full 300 DPI for OCR accuracy but embedded at 200 DPI for file size —
-two separate numbers, deliberately decoupled. Tesseract emits **hOCR** (text plus word
+Scans are read at full 300 DPI in greyscale for OCR accuracy, but embedded at 200 DPI in
+the scanner's own colour for file size — two separate derivatives, deliberately
+decoupled, from one deskew measured once and applied to both. Tesseract emits **hOCR** (text plus word
 coordinates) rather than a finished PDF, and the app composes the invisible text layer over
 its own compressed images. Bookmarks come from a heuristic parse of the printed contents
 page, presented to the operator in an editable grid alongside a page preview; a human
@@ -81,9 +95,16 @@ and would attach redistribution obligations to an installer handed to other inst
 
 ## Scanned material is not in this repository
 
-Page scans are excluded by `.gitignore`. The TIFFs are the preservation master and live in
-archival storage; a clone will not have them. Sample material used during development is
-`Image Files/SRE Vol 1 Number 1/` — 22 TIFFs, 300 DPI grayscale, ~103 MB.
+Page scans are excluded by `.gitignore`, and none has ever been committed. The TIFFs are
+the preservation master and live in archival storage; a clone will not have them. The
+journal is the Historical Society's copyright, so no page of it appears here — not as a
+fixture, and not inside a screenshot.
+
+Development ran against 73 issue folders, 2,327 pages, 1971 to 2015. What that survey
+found is in
+[the scan completeness report](docs/scan-completeness-report.md): four issues with pages
+demonstrably missing, four more to check against paper, and thirteen whose page numbers
+could not be read well enough to judge.
 
 ## Repository layout
 
@@ -91,7 +112,7 @@ archival storage; a clone will not have them. Sample material used during develo
 srebook/core/     the pipeline: ingest, prepare, ocr, outline, assemble
 srebook/cli.py    command line front end
 srebook/gui/      Tkinter interface (grid.py holds the rules, app.py the widgets)
-tests/            183 tests, no image fixtures or display required
+tests/            432 tests, no display required
 packaging/        vendoring, PyInstaller spec, Inno Setup script, sandbox test
 docs/
   superpowers/specs/    design documents
@@ -104,7 +125,7 @@ CLAUDE.md         working guidance and hard constraints
 py packaging/build.py
 ```
 
-Produces `dist/SREBookBuilder-0.1.0-setup.exe` (64 MB), which installs per-user and
+Produces `dist/SREBookBuilder-<version>-setup.exe` (67 MB), which installs per-user and
 needs no administrator — usually the obstacle to getting a tool onto a library
 workstation. It bundles its own Tesseract and never uses one it finds on the machine.
 

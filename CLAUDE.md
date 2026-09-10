@@ -10,9 +10,17 @@ scans into a single searchable, bookmarked, page-labeled PDF.
 Built for digitizing *Snake River Echoes*, the journal of the Upper Snake River Valley
 Historical Society, but intended to be handed to other archives as an installer.
 
-**Current state: released through v0.1.7 and in daily use.** The installer is verified
+**Current state: released through v0.1.9 and in daily use.** The installer is verified
 on a pristine Windows with no Python and no Tesseract, and a special collections
 employee is processing real issues with it.
+
+**The repository is public**, MIT licensed, at
+<https://github.com/byui-library/snake-river-echoes> -- which is the point: the program
+is meant to be handed to other archives, and a repository nobody can read is not much of
+a handover. Two consequences for anything committed here. The scans are the Historical
+Society's, not the library's, so **no page of the journal goes into the repository** --
+not as a test fixture beyond the tiny downsampled ones, and not inside a screenshot. And
+no local paths: the guide's screenshots use a representative `D:\Scans\...`.
 
 The authoritative design is
 [docs/superpowers/specs/2026-08-20-sre-book-builder-design.md](docs/superpowers/specs/2026-08-20-sre-book-builder-design.md).
@@ -21,7 +29,7 @@ one of them — resolve it explicitly rather than silently following the code.
 
 ## Next session — start here
 
-Released through v0.1.7 and in use by a special collections employee. `py -m pytest`
+Released through v0.1.9 and in use by a special collections employee. `py -m pytest`
 (432 tests) and `py packaging/build.py` both work from a clean checkout plus the
 sample scans.
 
@@ -219,9 +227,18 @@ Then double-click `dist/clean-test.wsb` to run the whole thing in Windows Sandbo
 | 0 | hOCR-to-PDF spike proven on the real 22 pages | **done** — [findings](docs/superpowers/specs/2026-08-20-phase0-findings.md) |
 | 1 | Core + CLI; a finished Vol 1 No 1 PDF | **done** — 128 tests, real PDF built |
 | 2 | Tkinter GUI | **done** — 165 tests |
-| 3 | Inno Setup installer | **done** — [clean-machine test passed](docs/superpowers/specs/2026-08-21-clean-machine-test-pass.txt) |
+| 3 | Inno Setup installer | **done** — [clean-machine test passed](docs/superpowers/specs/2026-09-10-clean-machine-test-v0.1.9.txt) |
+| 4 | The whole collection surveyed for missing pages | **done** — [report](docs/scan-completeness-report.md), 73 folders, 2,327 pages |
+| 5 | Colour preserved end to end | **done** — 0.1.9; 64 of 73 folders are colour |
 
 Keep this table current.
+
+**Not done, and worth doing.** `build` re-prepares every image even when the OCR is
+cached, so a rebuild after a bookmark edit costs ~26 s on a 45-sheet colour issue.
+Caching `embed_jpeg` beside the `.hocr`, keyed on `(sheet, embed_dpi)`, would make it
+free. Separately, the OCR cache key does not include a stamp for the prepare pipeline, so
+changing how the OCR image is derived does not invalidate what it invalidates -- adding
+one would force a ~90 minute re-read of the collection, which is why it has not been.
 
 ## Phase 0 results carried into Phase 1
 
