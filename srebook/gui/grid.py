@@ -124,12 +124,18 @@ class OutlineGrid:
 
     def edit(self, index: int, title: str | None = None, sheet: int | None = None) -> None:
         self._remember()
+        row = self.rows[index]
         if title is not None:
-            self.rows[index].title = title
+            row.title = title
         if sheet is not None:
-            self.rows[index].sheet = sheet
+            row.sheet = sheet
+            # It now points at a page that exists, so it is an ordinary
+            # bookmark. Assembly keys on the reason, not the flag: leaving it
+            # set published nothing while the list showed it as settled.
+            row.review_reason = ""
+            row.missing_page = None
         # The operator has looked at it; that is what the flag was waiting for.
-        self.rows[index].needs_review = False
+        row.needs_review = False
         self.dirty = True
 
     def confirm(self, index: int) -> None:
@@ -142,6 +148,11 @@ class OutlineGrid:
         self._remember()
         span = 1 + self._children_of(index)
         for row in self.rows[index:index + span]:
+            # A row waiting on an unscanned page cannot be accepted as it
+            # stands -- the page is not there. Clearing its flag only made it
+            # look settled while assembly went on dropping it.
+            if row.review_reason == "missing":
+                continue
             row.needs_review = False
         self.dirty = True
 
@@ -167,7 +178,11 @@ class OutlineGrid:
         self._remember()
         above = self.rows[index - 1]
         above.title = " ".join(f"{above.title} {self.rows[index].title}".split())
+        # Clear the reason as well as the flag. Assembly drops a bookmark whose
+        # reason is "missing" whatever the flag says, so a row merged into one
+        # looked settled in the list and vanished from the PDF without a word.
         above.needs_review = False      # it has just been looked at
+        above.review_reason = ""
         above.missing_page = None
         del self.rows[index]
         self.dirty = True

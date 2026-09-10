@@ -165,7 +165,8 @@ py -m srebook.gui                                            # the window
 py -m pytest                                                 # 412 tests, ~25s
 ```
 
-Drafting an issue takes about 80 seconds; building from cached OCR is near-instant.
+Drafting an issue takes about 80 seconds. Rebuilding reuses the cached OCR but still
+re-prepares every image, so it is ~26 s for a 45-sheet colour issue -- see Architecture.
 
 ## Packaging
 

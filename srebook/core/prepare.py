@@ -21,6 +21,9 @@ DESKEW_LIMIT_DEG = 2.0    # scans are placed by hand; beyond this it is a misfee
 DESKEW_STEP_DEG = 0.1
 DESKEW_MIN_DEG = 0.15     # below this, a resample costs more than it fixes
 JPEG_QUALITY = 72
+# Modes that hold no colour, whatever their depth: bitonal, and the 16/32-bit
+# greyscales some scanners emit.
+COLOURLESS_MODES = {"1", "I", "I;16", "I;16B", "I;16L", "F"}
 
 Image.MAX_IMAGE_PIXELS = None  # archival scans are legitimately large
 
@@ -83,6 +86,15 @@ def displayable(image: Image.Image) -> Image.Image:
         flat = Image.new("RGB", image.size, (255, 255, 255))
         flat.paste(image, mask=image.getchannel("A"))
         return flat
+    if image.mode == "LA":
+        flat = Image.new("L", image.size, 255)
+        flat.paste(image.convert("L"), mask=image.getchannel("A"))
+        return flat
+    # Bitonal and deep-greyscale scans carry no colour. Sending them to RGB
+    # would triple the embedded size and put JPEG ringing along the edges of
+    # 1-bit type, for nothing.
+    if image.mode in COLOURLESS_MODES:
+        return image.convert("L")
     if image.mode not in ("L", "RGB"):
         return image.convert("RGB")
     return image

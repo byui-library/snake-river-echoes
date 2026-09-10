@@ -166,3 +166,28 @@ def test_the_deskew_angle_is_applied_to_the_colour_image_too(tmp_path):
     skewed = float(np.var(np.asarray(page.convert("L").resize(embedded.size),
                                      dtype=np.float32).sum(axis=1)))
     assert straight > skewed
+
+
+def test_a_bitonal_scan_becomes_greyscale_not_colour(tmp_path):
+    """A 1-bit scan carries no colour. Promoting it to RGB triples the
+    embedded size and adds JPEG ringing along the edges of the type."""
+    path = tmp_path / "bitonal.tif"
+    text_like_page().convert("1").save(path, dpi=(300, 300))
+
+    sheet = prepare.prepare_sheet(path)
+
+    assert Image.open(io.BytesIO(sheet.embed_jpeg)).mode == "L"
+
+
+def test_greyscale_with_an_alpha_band_stays_greyscale(tmp_path):
+    path = tmp_path / "la.tif"
+    text_like_page().convert("LA").save(path, dpi=(300, 300))
+
+    sheet = prepare.prepare_sheet(path)
+
+    assert Image.open(io.BytesIO(sheet.embed_jpeg)).mode == "L"
+
+
+def test_a_deep_greyscale_scan_stays_greyscale(tmp_path):
+    """16-bit greyscale is what some scanners emit; it is still not colour."""
+    assert prepare.displayable(Image.new("I;16", (40, 40), 300)).mode == "L"

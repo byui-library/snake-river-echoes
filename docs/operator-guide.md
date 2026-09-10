@@ -58,7 +58,7 @@ Correct anything wrong. Two settings are worth a second look:
 Click any bookmark to see that page on the right. Drag the divider between the
 list and the page to make the page bigger, or maximise the window.
 
-**To look at every sheet**, use **◀ Previous sheet** and **Next sheet ▶** under
+**To look at every sheet**, use **◀ Previous** and **Next ▶** under
 the page. The bookmark list holds *articles*, so a sheet carrying none — a blank
 inside the cover, a full-page photograph — appears nowhere in it. Stepping
 through is how you confirm the scan is whole. The caption names each one:
@@ -71,10 +71,12 @@ it. It is still there, and still becomes a page in the PDF.
 
 **5. Click Build PDF.**
 
-It takes a second or two, because the text was already read in step 2. The PDF
-appears in an `output` folder inside the issue's folder.
+The text was already read in step 2, so it does not read it again. It does
+process the images, which takes a few seconds for a short issue and up to half
+a minute for a long one in colour. The PDF appears in an `output` folder inside
+the issue's folder.
 
-If you change a bookmark afterwards, just press Build again — it is quick.
+If you change a bookmark afterwards, just press Build again.
 
 ---
 
@@ -121,13 +123,17 @@ It shows the printed page it is waiting for, and stays in your saved review. It
 is left out of the PDF. Scan the page, build again, and it takes its place. See
 *If pages are missing from the scan* below.
 
+**Confirm does nothing to these** — the page is still not there. If you find the
+article really is in the scan after all, give it a page number and it becomes an
+ordinary bookmark.
+
 ### The buttons
 
 ![The buttons under the bookmark list.](images/buttons.png)
 
 | Button | What it does |
 |---|---|
-| **Confirm** | Accepts the selected bookmark as it stands |
+| **Confirm** | Accepts the selected bookmark as it stands. It has no effect on one waiting for a page that was never scanned — that page still is not there |
 | **Add** | A new bookmark on the sheet you are looking at, for something the program missed entirely |
 | **Remove** | Deletes the selected bookmark |
 | **↑ ↓** | Moves a bookmark up or down the list |

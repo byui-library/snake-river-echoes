@@ -771,3 +771,59 @@ def test_undo_marks_the_grid_dirty_so_the_change_is_saved():
     g.undo()
 
     assert g.dirty
+
+
+def test_merging_into_a_missing_bookmark_makes_it_publishable_again():
+    """The merged row looked settled in the list but was still marked as
+    waiting on an unscanned page, so assembly dropped it from the PDF
+    silently -- a bookmark the operator had just repaired, gone."""
+    g = a_grid([Bookmark("Battle of Pierre's Hole", 4, needs_review=True,
+                         review_reason="missing", missing_page=28),
+                Bookmark("By Wendell Gillette", 4)])
+
+    g.merge_up(1)
+
+    assert g.rows[0].review_reason == ""
+    assert g.rows[0].missing_page is None
+
+
+def test_merging_clears_the_reason_on_every_kind_of_flag():
+    for reason in ("missing", "unplaced", "suggested"):
+        g = a_grid([Bookmark("Title", 4, needs_review=True, review_reason=reason),
+                    Bookmark("By Someone", 4)])
+        g.merge_up(1)
+        assert g.rows[0].review_reason == "", reason
+
+
+def test_giving_a_missing_bookmark_a_real_sheet_makes_it_publishable():
+    """Once it points at a page that exists, it is an ordinary bookmark."""
+    g = a_paginated_grid([Bookmark("Battle of Pierre's Hole", 1, needs_review=True,
+                                   review_reason="missing", missing_page=28)])
+
+    g.edit(0, sheet=6)
+
+    assert g.rows[0].review_reason == ""
+    assert g.rows[0].missing_page is None
+
+
+def test_retitling_a_missing_bookmark_does_not_publish_it():
+    """Its page is still not in the scan; only a real sheet changes that."""
+    g = a_paginated_grid([Bookmark("Battle", 1, needs_review=True,
+                                   review_reason="missing", missing_page=28)])
+
+    g.edit(0, title="The Battle of Pierre's Hole")
+
+    assert g.rows[0].review_reason == "missing"
+
+
+def test_a_missing_bookmark_cannot_be_confirmed_into_the_pdf():
+    """Confirm accepts a row as it stands. A missing row cannot be accepted:
+    its page is not there, and clearing the flag made it look settled while
+    assembly still dropped it."""
+    g = a_paginated_grid([Bookmark("Battle", 1, needs_review=True,
+                                   review_reason="missing", missing_page=28)])
+
+    g.confirm(0)
+
+    assert g.needs_attention(0), "it must not look settled"
+    assert g.rows[0].review_reason == "missing"

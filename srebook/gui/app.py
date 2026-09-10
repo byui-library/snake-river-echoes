@@ -344,6 +344,12 @@ class App(ttk.Frame):
 
         self.folder = folder
         self.folder_var.set(str(folder))
+        # Everything remembered about the previous issue is now wrong: sheet
+        # dimensions differ, so its previews would be laid out at the old
+        # aspect ratio, and a pending resize could index past a shorter issue.
+        self._sheet_sizes.clear()
+        self._shown_sheet = None
+        self._resize_job = None
         self.folder_note.config(text=f"{len(self.sheets)} sheets found.")
         self.preview_cache.clear()
         self.reanalyse_button.config(state="normal")
@@ -522,6 +528,21 @@ class App(ttk.Frame):
         waiting = bool(issue and issue.missing_pages and not issue.gap_acknowledged)
         self.acknowledge_button.config(state="normal" if waiting else "disabled")
 
+    def _undo_applies_here(self) -> bool:
+        """Not while a prompt is open, and not inside a text field.
+
+        The shortcut is bound application-wide so it works wherever the focus
+        is in the window, which also delivered it to the modal title prompt and
+        to the issue fields: an undo ran behind the open dialog, and the edit
+        it then accepted landed on whatever row had moved into that position.
+        """
+        focused = self.focus_get()
+        if focused is None:
+            return True
+        if focused.winfo_toplevel() is not self.winfo_toplevel():
+            return False                      # a prompt has the keyboard
+        return not isinstance(focused, (tk.Entry, ttk.Entry, ttk.Combobox))
+
     def _refresh_tree(self, select: int | None = None) -> None:
         self.tree.delete(*self.tree.get_children())
         parents: dict[int, str] = {}
@@ -582,7 +603,7 @@ class App(ttk.Frame):
 
     def undo(self) -> None:
         """Step back one action on the bookmark list."""
-        if not self.grid_model:
+        if not self.grid_model or not self._undo_applies_here():
             return
         if not self.grid_model.undo():
             self.status.config(text="Nothing to undo.")
